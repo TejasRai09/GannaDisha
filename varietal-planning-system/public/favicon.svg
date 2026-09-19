@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Gobind Sugar Mills - mill, circuitry and leaves. Tab favicon. -->
+
+  <!-- gear base -->
+  <path d="M 33 82 L 35 90 L 42 90 L 44 82 L 50 82 L 52 90 L 59 90 L 61 82 A 30 30 0 0 0 33 82 Z" fill="#0f766e"/>
+  <circle cx="47" cy="82" r="4.5" fill="#ffffff"/>
+
+  <!-- factory silhouette -->
+  <path d="M 22 82 L 22 40 L 30 40 L 30 58 L 38 50 L 38 60 L 46 52 L 46 82 Z" fill="#0f766e"/>
+
+  <text x="34" y="69" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="800" font-size="6.5" fill="#ffffff" letter-spacing="0.2">Gobind</text>
+  <text x="34" y="76" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="700" font-size="5.5" fill="#ffffff" letter-spacing="0.2">Sugar Mills</text>
+
+  <!-- circuitry -->
+  <g stroke="#0284c7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M 46 45 L 46 38 L 56 28 L 56 21"/>
+    <circle cx="56" cy="21" r="2.5" fill="#0284c7"/>
+    <path d="M 46 62 L 60 62 L 60 42 L 68 34 L 75 34"/>
+    <circle cx="75" cy="34" r="2.5" fill="#0284c7"/>
+    <path d="M 46 72 L 68 72 L 68 52 L 76 44 L 84 44"/>
+    <circle cx="84" cy="44" r="2.5" fill="#0284c7"/>
+    <path d="M 61 80 L 82 80"/>
+    <circle cx="82" cy="80" r="2.5" fill="#0284c7"/>
+  </g>
+
+  <!-- leaves -->
+  <path d="M 56 38 Q 66 18 82 18 Q 72 34 66 38 Z" fill="#10b981"/>
+  <path d="M 69 48 Q 82 28 95 34 Q 80 48 73 51 Z" fill="#65a30d"/>
+</svg>

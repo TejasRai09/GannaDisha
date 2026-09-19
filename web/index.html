@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Varietal — Plot Map</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%234ea8de'/><path d='M3 11l3-6 3 4 2-2 2 4z' fill='%23122'/></svg>">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="loading">
+  <div class="load-card">
+    <div class="load-title">Varietal Plot Map</div>
+    <div class="load-bar"><i id="load-fill"></i></div>
+    <div class="load-msg" id="load-msg">Loading plot geometry…</div>
+  </div>
+</div>
+
+<aside id="sidebar">
+  <header>
+    <h1>Plot Map</h1>
+    <button id="collapse" title="Hide panel">‹</button>
+  </header>
+
+  <div class="search-wrap">
+    <input id="search" type="search" placeholder="Search village, grower or staff…" autocomplete="off">
+    <div id="results"></div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="section">
+    <label class="lbl">Colour plots by</label>
+    <select id="colorby">
+      <option value="variety">Variety</option>
+      <option value="crop_type">Crop type (plant / ratoon)</option>
+      <option value="crop_category">Crop category</option>
+      <option value="village">Village</option>
+      <option value="society">Society</option>
+      <option value="region">Region</option>
+      <option value="field_staff">Field staff</option>
+      <option value="area">Plot size</option>
+      <option value="none">Single colour</option>
+    </select>
+  </div>
+
+  <div class="section filters" id="filters"></div>
+
+  <div class="section">
+    <label class="lbl">Plot fill opacity <span id="opval">75%</span></label>
+    <input id="opacity" type="range" min="0" max="100" value="75">
+    <label class="chk"><input type="checkbox" id="outlines" checked> Show plot outlines</label>
+    <label class="chk"><input type="checkbox" id="labels" checked> Show village labels</label>
+  </div>
+
+  <footer>
+    <button id="reset">Reset filters</button>
+    <button id="export">Export view as CSV</button>
+  </footer>
+</aside>
+
+<button id="expand" title="Show panel">›</button>
+
+<div id="map"></div>
+
+<div id="legend"></div>
+
+<div id="basemaps">
+  <button data-bm="satellite" class="on">Satellite</button>
+  <button data-bm="hybrid">Hybrid</button>
+  <button data-bm="streets">Streets</button>
+  <button data-bm="plain">Plain</button>
+</div>
+
+<div id="readout"></div>
+
+<div id="detail" class="hidden">
+  <button id="detail-close">×</button>
+  <div id="detail-body"></div>
+</div>
+
+<div id="tooltip" class="hidden"></div>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/deck.gl@9.0.36/dist.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

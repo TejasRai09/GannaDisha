@@ -1,0 +1,48 @@
+# ---------------------------------------------------------------------------
+# MILL DATA - never committed.
+#
+# This repository is public. The survey exports carry grower names, father's
+# names, village names and GPS corners for 74,283 growers across 178,635 plots.
+# baseline.json carries the same thing in compact form. None of it belongs on
+# GitHub, and the raw exports are over GitHub's file size limit in any case.
+#
+# On a server, put these in place by hand after deploying - see README.
+# ---------------------------------------------------------------------------
+*.xlsx
+*.xls
+*.csv
+*.parquet
+*.txt
+!requirements*.txt
+
+baseline.json
+varietal-planning-system/public/baseline.json
+plan_inputs/
+plan_outputs/
+build/cache/
+web/data/
+
+# Generated documents (rebuild with the scripts in build/)
+*.docx
+
+# ---------------------------------------------------------------------------
+# Build output and dependencies
+# ---------------------------------------------------------------------------
+node_modules/
+dist/
+build/__pycache__/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Editor and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+~$*
+
+# Logs
+*.log
+npm-debug.log*

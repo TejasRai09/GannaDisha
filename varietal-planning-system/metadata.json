@@ -1,0 +1,6 @@
+{
+  "name": "Varietal Planning System",
+  "description": "3-year sugarcane varietal planning and seed allocation system for Gobind Sugar Mills, Aira (Uttar Pradesh).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

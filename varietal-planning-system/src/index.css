@@ -1,0 +1,318 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    /* LIGHT MODE: Ultra-clean emerald & slate enterprise aesthetic */
+    --surface-page: #F8FAFC;
+    --surface-card: #FFFFFF;
+    --surface-sunken: #F1F5F9;
+    --surface-elevated: #FFFFFF;
+    --border: #E2E8F0;
+    --border-strong: #CBD5E1;
+    --text-primary: #0F172A;
+    --text-secondary: #475569;
+    --text-muted: #94A3B8;
+    
+    /* VIBRANT AGRONOMIC EMERALD ACCENTS */
+    --accent: #059669;
+    --accent-hover: #047857;
+    --accent-subtle: #ECFDF5;
+    --accent-border: #A7F3D0;
+    --accent-foreground: #FFFFFF;
+
+    /* STATUS TOKENS */
+    --status-good: #10B981;
+    --status-warning: #F59E0B;
+    --status-serious: #F97316;
+    --status-critical: #EF4444;
+    --status-info: #3B82F6;
+
+    /* REFINED SHADOWS */
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.03);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.03);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
+
+    /* RADII */
+    --radius-card: 12px;
+    --radius-input: 8px;
+    --radius-chip: 6px;
+    --radius-pill: 999px;
+  }
+
+  .dark {
+    /* DARK MODE: Deep obsidian slate with radiant emerald & subtle border glow */
+    --surface-page: #090D11;
+    --surface-card: #0F161E;
+    --surface-sunken: #151F2A;
+    --surface-elevated: #1A2634;
+    --border: #1E293B;
+    --border-strong: #334155;
+    --text-primary: #F8FAFC;
+    --text-secondary: #94A3B8;
+    --text-muted: #64748B;
+    
+    --accent: #10B981;
+    --accent-hover: #34D399;
+    --accent-subtle: rgba(16, 185, 129, 0.12);
+    --accent-border: rgba(16, 185, 129, 0.25);
+    --accent-foreground: #090D11;
+
+    --status-good: #34D399;
+    --status-warning: #FBBF24;
+    --status-serious: #FB923C;
+    --status-critical: #F87171;
+    --status-info: #60A5FA;
+
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.55), 0 2px 4px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.7);
+  }
+
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--surface-page);
+    color: var(--text-primary);
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* All numbers use tabular figures */
+  .tabular-nums,
+  [data-tabular-nums="true"],
+  input[type="number"],
+  td.numeric,
+  .metric-value {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Custom scrollbars for data-dense tables */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--surface-sunken);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Standardized Card Style */
+.app-card {
+  background-color: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 150ms cubic-bezier(0.16, 1, 0.3, 1), transform 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.app-card-interactive:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--accent-border);
+}
+
+/* Glassmorphic Panel Style */
+.app-glass {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+}
+.dark .app-glass {
+  background: rgba(15, 22, 30, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+}
+
+/* Accent Glow and Subtle Borders */
+.glow-emerald {
+  box-shadow: 0 0 20px -4px rgba(16, 185, 129, 0.25);
+}
+
+/* Custom Table Styles */
+.app-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.app-table th {
+  background-color: var(--surface-sunken);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.app-table td {
+  height: 44px;
+  padding: 10px 16px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.app-table tbody tr {
+  transition: background-color 120ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.app-table tbody tr:hover {
+  background-color: var(--surface-sunken);
+}
+
+/* Chips / Badges */
+.app-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--radius-chip);
+  padding: 2px 8px;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+/* Custom Buttons */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: var(--radius-input);
+  background-color: var(--accent);
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  transition: all 120ms cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+.btn-primary:hover {
+  background-color: var(--accent-hover);
+}
+.btn-primary:active {
+  transform: scale(0.98);
+}
+.btn-primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--surface-page), 0 0 0 4px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: var(--radius-input);
+  background-color: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  transition: all 120ms cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+.btn-secondary:hover {
+  background-color: var(--surface-sunken);
+}
+.btn-secondary:active {
+  transform: scale(0.98);
+}
+.btn-secondary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--surface-page), 0 0 0 4px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--radius-input);
+  background-color: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  transition: all 120ms cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+.btn-ghost:hover {
+  color: var(--text-primary);
+  background-color: var(--surface-sunken);
+}
+
+/* Animations and Transitions */
+@keyframes fadeInRise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* No `forwards` here, deliberately. A retained transform - even the identity
+   matrix a finished translateY(0) leaves behind - makes this element the
+   containing block for `position: fixed` descendants, which anchors every modal
+   inside it to the scrolled screen instead of the viewport. Without the fill the
+   transform is released on completion, and the element's own style (opacity 1,
+   no transform) is identical to the final frame, so nothing flashes. */
+.screen-fade-in {
+  animation: fadeInRise 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Flash effect for metrics */
+@keyframes accentFlash {
+  0% {
+    background-color: var(--accent-subtle);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.flash-updated {
+  animation: accentFlash 400ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
