@@ -175,7 +175,7 @@ def build(df: pd.DataFrame, filled: bool, path: str, source_note: str) -> None:
     t.value = (
         "VARIETY INPUT - SAMPLE (TEST DATA, DO NOT USE FOR PLANNING)"
         if filled
-        else "VARIETY INPUT SHEET - Gobind Sugar Mills, Aira"
+        else "VARIETY INPUT SHEET - Gobind Sugar Mill, Aira"
     )
     t.font = Font(bold=True, size=14, color="FFFFFF")
     t.fill = PatternFill("solid", fgColor="B91C1C" if filled else "0F766E")

@@ -658,7 +658,7 @@ export const Step3Parameters: React.FC<Step3ParametersProps> = ({
                 <span className="font-medium text-(--text-primary) flex items-center">
                   Command Area (Hectares)
                   <Tooltip
-                    content="Gross sugarcane acreage targeted across Gobind Sugar Mills bonded command area for crushing capacity."
+                    content="Gross sugarcane acreage targeted across Gobind Sugar Mill bonded command area for crushing capacity."
                     source="Factory Crushing Capacity (9,000 TCD)"
                   />
                 </span>

@@ -122,7 +122,7 @@ p("THE VARIETAL ENGINE", bold=True, size=26, color=TEAL, align=WD_ALIGN_PARAGRAP
 p("How it works - every step, every calculation", size=14, color=GREY,
   align=WD_ALIGN_PARAGRAPH.CENTER)
 doc.add_paragraph()
-p("Gobind Sugar Mills Limited, Aira  |  Three-Year Varietal Plan 2027-28 to 2029-30",
+p("Gobind Sugar Mill Limited, Aira  |  Three-Year Varietal Plan 2027-28 to 2029-30",
   align=WD_ALIGN_PARAGRAPH.CENTER)
 p("Figures from the run of 2 September 2026. Every number below can be checked on a calculator.",
   size=10, color=GREY, align=WD_ALIGN_PARAGRAPH.CENTER)

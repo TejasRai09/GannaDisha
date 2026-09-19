@@ -124,7 +124,7 @@ p("THE VARIETAL PLANNING SYSTEM", bold=True, size=26, color=TEAL,
 p("A Complete Guide - every file, every formula, every decision",
   size=14, color=GREY, align=WD_ALIGN_PARAGRAPH.CENTER)
 doc.add_paragraph()
-p("Gobind Sugar Mills Limited, Aira - Three-Year Varietal Plan 2027-28 to 2029-30",
+p("Gobind Sugar Mill Limited, Aira - Three-Year Varietal Plan 2027-28 to 2029-30",
   align=WD_ALIGN_PARAGRAPH.CENTER)
 p("Prepared August 2026  |  Companion to the Varietal Plan Guiding Document (Rev. July 2026)",
   size=10, color=GREY, align=WD_ALIGN_PARAGRAPH.CENTER)

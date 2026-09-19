@@ -40,6 +40,7 @@ import { Step6Allocation } from './components/Step6Allocation';
 import { ScenarioCompareModal } from './components/ScenarioCompareModal';
 import { allocatePlots } from './engine/allocate';
 import { inferLandTypes } from './engine/inferLandType';
+import { fetchDeployedBaseline } from './lib/loadBaseline';
 
 
 /**
@@ -88,7 +89,53 @@ function registryFromBaseline(b: BaselineData): VarietyRecord[] {
 export default function App() {
   // Navigation & Role State
   const [currentStep, setCurrentStep] = useState<StepNumber>(1);
-  const [userRole, setUserRole] = useState<UserRole>('plant_team');
+  // Everyone who can sign in is a manager. The Plant Team / Manager switch is
+  // gone; access is decided at the login page, not inside the app.
+  const userRole: UserRole = 'manager';
+  const [signedInUser, setSignedInUser] = useState<string | null>(null);
+
+  // Who is signed in. The cookie is HttpOnly so the page cannot read it directly;
+  // the auth service answers for it. A failure here is not fatal - nginx has
+  // already refused anyone without a valid session before this code runs.
+  useEffect(() => {
+    fetch('/api/me', { credentials: 'same-origin' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d?.email && setSignedInUser(d.email))
+      .catch(() => {});
+  }, []);
+
+  /**
+   * Load the season's survey on arrival.
+   *
+   * The team should not have to find and upload the same file every time they
+   * sign in. If the deployment ships a prepared baseline.json, it is read once
+   * on load and Step 1 opens already filled in. Where there is none - a local
+   * checkout, say - nothing happens and Step 1 asks for an upload as before.
+   */
+  const applyBaseline = React.useCallback((b: BaselineData, plots?: FreePlot[]) => {
+    setBaseline(b);
+    // The survey is the source of the variety list - Step 2 starts from what is
+    // actually in the ground, not a blank page.
+    const reg = registryFromBaseline(b);
+    setVarieties(reg);
+    setStrategies(
+      Object.fromEntries(
+        reg.map((v) => [
+          v.id,
+          { varietyId: v.id, strategy: v.strategy, retentionPreset: 'BALANCED' as const, retentionPct: 50 },
+        ])
+      )
+    );
+    if (plots) setFreePlots(plots);
+  }, []);
+
+  useEffect(() => {
+    const ac = new AbortController();
+    fetchDeployedBaseline(ac.signal).then((decoded) => {
+      if (decoded) applyBaseline(decoded.baseline, decoded.freePlots);
+    });
+    return () => ac.abort();
+  }, [applyBaseline]);
 
   // Dark/Light Theme state
   const [isDark, setIsDark] = useState<boolean>(() => {
@@ -253,8 +300,12 @@ export default function App() {
           currentStep={currentStep}
           onSelectStep={(step) => setCurrentStep(step as StepNumber)}
           completedSteps={[1, 2, 3, 4, 5, 6].filter((s) => s < currentStep)}
-          role={userRole}
-          onRoleChange={(role) => setUserRole(role)}
+          user={signedInUser}
+          onSignOut={() => {
+            fetch('/api/logout', { method: 'POST' }).finally(() => {
+              window.location.href = '/login.html';
+            });
+          }}
           isDark={isDark}
           onToggleTheme={() => setIsDark((prev) => !prev)}
           onOpenCompareModal={() => setIsGlobalScenarioModalOpen(true)}
@@ -270,21 +321,7 @@ export default function App() {
           {currentStep === 1 && (
             <Step1Data
               baseline={baseline}
-              onBaselineLoaded={(b) => {
-                setBaseline(b);
-                // The survey is the source of the variety list - Step 2 starts
-                // from what is actually in the ground, not a blank page.
-                const reg = registryFromBaseline(b);
-                setVarieties(reg);
-                setStrategies(
-                  Object.fromEntries(
-                    reg.map((v) => [
-                      v.id,
-                      { varietyId: v.id, strategy: v.strategy, retentionPreset: 'BALANCED', retentionPct: 50 },
-                    ])
-                  )
-                );
-              }}
+              onBaselineLoaded={(b) => applyBaseline(b)}
               onFreePlotsLoaded={setFreePlots}
               onProceedToVarieties={() => setCurrentStep(2)}
               isDark={isDark}

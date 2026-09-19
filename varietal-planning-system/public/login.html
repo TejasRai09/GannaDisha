@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ganna Chakra Sign In</title>
+<meta name="description" content="Varietal planning for Gobind Sugar Mill, Aira.">
+<link rel="icon" type="image/png" href="/logo-mark-64.v3.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+  /* Deliberately one light treatment. Every colour is painted explicitly, so
+     the page holds the same on any host ground, light or dark. */
+  :root {
+    --ground:      #E8EEE9;
+    --glass:       rgba(255, 255, 255, .86);
+    --glass-line:  rgba(255, 255, 255, .85);
+    --ink:         #14201A;
+    --ink-2:       #4C5A52;
+    --ink-3:       #7E8C84;
+    --hair:        rgba(20, 32, 26, .10);
+    --accent:      #0F766E;
+    --cane:        #7CB518;
+    --amber:       #E8A33D;
+    --danger:      #A3341F;
+    --danger-bg:   rgba(220, 120, 96, .13);
+  }
+
+  * { box-sizing: border-box; }
+  html { height: 100%; }
+  body {
+    margin: 0;
+    /* dvh follows the iOS toolbar as it hides and shows; the vh line is the
+       fallback for anything that does not know dvh. */
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    display: grid;
+    place-items: center;
+    /* Keep clear of the notch and the home indicator. */
+    padding:
+      calc(28px + env(safe-area-inset-top))  calc(20px + env(safe-area-inset-right))
+      calc(28px + env(safe-area-inset-bottom)) calc(20px + env(safe-area-inset-left));
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* An aerial of the mill itself, sharp. It was blurred at first and the place
+     became unrecognisable, which defeated the point of using a photograph of
+     it. The card's own frosted panel does the separating instead. */
+  .bg {
+    position: fixed; inset: 0; z-index: 0;
+    background: url('/mill-bg.v2.jpg') center / cover no-repeat;
+    background-color: var(--ground);
+  }
+  /* A wash over the photo so the white card and its text hold against a
+     mid-tone image. Without it the glass disappears into the fields. */
+  .bg::after {
+    content: ''; position: absolute; inset: 0;
+    /* Light enough to see the mill through. The card sits over the centre, so
+       the wash is strongest there and thins out towards the edges, rather than
+       covering the whole photograph the way it did before. */
+    /* Just enough to keep the white card legible over a sharp photograph.
+       The mill stays clearly readable everywhere outside the card. */
+    background:
+      radial-gradient(46% 38% at 50% 46%, rgba(236,243,238,.52), rgba(236,243,238,0) 76%),
+      linear-gradient(to bottom, rgba(255,255,255,.06), rgba(210,222,212,.16));
+  }
+  @media (max-width: 760px) {
+    .bg { background-image: url('/mill-bg-sm.v2.jpg'); }
+  }
+
+  .card {
+    position: relative; z-index: 1;
+    width: 100%; max-width: 408px;
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(26px) saturate(140%);
+    backdrop-filter: blur(26px) saturate(140%);
+    border: 1px solid var(--glass-line);
+    border-radius: 20px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.7) inset,
+      0 24px 60px -18px rgba(12, 32, 22, .42),
+      0 2px 8px rgba(20, 45, 35, .06);
+    padding: 40px 36px 30px;
+    display: flex; flex-direction: column; gap: 26px;
+  }
+  /* On a phone the card covers most of the screen, so at desktop opacity it
+     hides the mill entirely. Thinner glass and a heavier frost: the photograph
+     reads through it the way it would through actual glass, and the text still
+     holds because the blur flattens the detail behind it. */
+  @media (max-width: 760px) {
+    .card {
+      background: rgba(255, 255, 255, .58);
+      -webkit-backdrop-filter: blur(30px) saturate(165%);
+      backdrop-filter: blur(30px) saturate(165%);
+      border-color: rgba(255, 255, 255, .62);
+      box-shadow:
+        0 1px 0 rgba(255,255,255,.55) inset,
+        0 18px 44px -16px rgba(10, 28, 19, .45);
+    }
+    /* Thinner glass means less contrast underneath, so the quiet text steps up
+       a level rather than fading into the fields. */
+    .note, .principle { color: var(--ink-2); }
+    .bg::after {
+      background:
+        radial-gradient(70% 50% at 50% 46%, rgba(232,241,234,.34), rgba(232,241,234,0) 80%),
+        linear-gradient(to bottom, rgba(255,255,255,.04), rgba(200,214,203,.14));
+    }
+  }
+
+  /* iPhone. SE is 375 wide, the 14 is 390, Pro Max 430. */
+  @media (max-width: 460px) {
+    .card {
+      padding: 30px 22px 24px;
+      border-radius: 18px;
+      gap: 22px;
+    }
+    .lockup { width: 190px; }
+    .tagline { font-size: 13.5px; }
+    .ms { padding: 15px 16px; font-size: 15px; }   /* a comfortable thumb target */
+    .principle { font-size: 11px; }
+    .foot { padding-top: 18px; gap: 14px; }
+    .parent { width: 94px; }
+    .note { font-size: 11.5px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ms { transition: none; }
+  }
+
+  .brand { display: flex; justify-content: center; }
+  /* The mark already carries the name and the mill line, so nothing is set
+     in type beside it - two wordmarks would fight. */
+  .lockup { width: 228px; height: auto; max-width: 100%; display: block; }
+  /* Sits with the mark, where a tagline belongs. Letter-spaced and set in the
+     accent so it reads as part of the identity rather than as body copy. */
+  .tagline {
+    margin: -8px 0 0;
+    text-align: center;
+    font-size: 14.5px;
+    font-weight: 600;
+    letter-spacing: .015em;
+    color: var(--accent);
+    text-wrap: balance;
+  }
+
+  /* Microsoft's own button treatment: white ground, their four squares. */
+  .ms {
+    display: flex; align-items: center; justify-content: center; gap: 11px;
+    width: 100%; padding: 13px 18px;
+    font: inherit; font-size: 14.5px; font-weight: 600; color: #1F2328;
+    background: #fff; border: 1px solid rgba(20,32,26,.16); border-radius: 11px;
+    cursor: pointer; text-decoration: none;
+    box-shadow: 0 1px 2px rgba(20,45,35,.07);
+    transition: box-shadow .16s, transform .07s, border-color .16s;
+  }
+  .ms:hover { border-color: rgba(20,32,26,.28); box-shadow: 0 4px 14px -4px rgba(20,45,35,.22); }
+  .ms:active { transform: translateY(1px); }
+  .ms:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ms svg { width: 18px; height: 18px; flex: none; }
+
+  .note {
+    font-size: 12px; line-height: 1.55; color: var(--ink-3);
+    text-align: center; margin: -12px 0 0;
+  }
+
+  .err {
+    display: flex; gap: 9px; align-items: flex-start;
+    background: var(--danger-bg); border: 1px solid rgba(163,52,31,.25);
+    color: var(--danger); border-radius: 11px; padding: 11px 13px;
+    font-size: 12.5px; line-height: 1.5;
+  }
+  .err svg { width: 15px; height: 15px; flex: none; margin-top: 1px; }
+  /* display:flex above beats the hidden attribute on its own, which left an
+     empty red box on the page every time there was no error to show. */
+  .err[hidden] { display: none; }
+
+  /* The idea the whole system rests on. Survey figures used to sit here, but
+     they were frozen into this file and would be wrong the day a new survey
+     landed. This stays true whatever the season. */
+  .foot {
+    margin: 4px 0 0; padding-top: 20px; border-top: 1px solid var(--hair);
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+  }
+  .principle {
+    margin: 0; font-size: 11.5px; line-height: 1.65; color: var(--ink-3);
+    text-align: center; text-wrap: balance;
+  }
+  /* The parent company mark, set quietly. Ganna Chakra is the product's own
+     identity - this sits below it rather than competing with it. */
+  .parent { width: 108px; height: auto; }
+</style>
+</head>
+<body>
+
+<div class="bg" aria-hidden="true"></div>
+
+<main class="card">
+  <div class="brand">
+    <img class="lockup" src="/logo-lockup.v3.png" width="700" height="510"
+         alt="Ganna Chakra - Gobind Sugar Mill, Aira">
+  </div>
+
+  <p class="tagline">Sahi Kism, Sahi Khet, Sahi Rukh</p>
+
+  <div class="err" id="err" role="alert" hidden>
+    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+      <path d="M10 1.8 1 18h18L10 1.8Zm0 5.4a.9.9 0 0 1 .9.9v4a.9.9 0 1 1-1.8 0v-4a.9.9 0 0 1 .9-.9Zm0 8.9a1.1 1.1 0 1 1 0-2.2 1.1 1.1 0 0 1 0 2.2Z"/>
+    </svg>
+    <span id="errtext"></span>
+  </div>
+
+  <a class="ms" id="signin" href="/api/auth/login">
+    <svg viewBox="0 0 21 21" aria-hidden="true">
+      <rect x="1"  y="1"  width="9" height="9" fill="#F25022"/>
+      <rect x="11" y="1"  width="9" height="9" fill="#7FBA00"/>
+      <rect x="1"  y="11" width="9" height="9" fill="#00A4EF"/>
+      <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+    </svg>
+    Sign in with Microsoft
+  </a>
+
+  <p class="note">
+    Use your Adventz work account.<br>
+    Access is limited to the cane planning team.
+  </p>
+
+  <div class="foot">
+    <p class="principle">
+      Three-year varietal planning for the Aira command area,<br>
+      down to which variety goes on which field.
+    </p>
+    <img class="parent" src="/zuari-logo.v2.png" width="225" height="70"
+         alt="Zuari Industries" loading="lazy">
+  </div>
+</main>
+
+<script>
+(function () {
+  var params = new URLSearchParams(location.search);
+
+  // Carry the page they were heading for through the Microsoft round trip.
+  var next = params.get('next');
+  if (next && next.charAt(0) === '/' && next.charAt(1) !== '/') {
+    document.getElementById('signin').href = '/api/auth/login?next=' + encodeURIComponent(next);
+  }
+
+  var error = params.get('error');
+  if (error) {
+    document.getElementById('errtext').textContent = error;
+    document.getElementById('err').hidden = false;
+  }
+})();
+</script>
+</body>
+</html>

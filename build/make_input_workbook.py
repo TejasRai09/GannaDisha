@@ -147,7 +147,7 @@ def sheet_start(wb, nvar, core, total, stamp):
     ws.row_dimensions[1].height = 30
 
     ws.merge_cells("A2:C2")
-    c = ws.cell(row=2, column=1, value="Gobind Sugar Mills, Aira  -  everything the planning system needs a person to decide")
+    c = ws.cell(row=2, column=1, value="Gobind Sugar Mill, Aira  -  everything the planning system needs a person to decide")
     c.font = Font(size=10, italic=True, color="475569")
     c.alignment = Alignment(horizontal="center")
 

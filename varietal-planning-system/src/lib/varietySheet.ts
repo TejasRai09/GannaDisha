@@ -217,7 +217,7 @@ function buildDataSheet(rows: TemplateRow[], sourceNote: string): string {
   // banner
   out.push(
     `<row r="1" ht="26" customHeight="1">` +
-      cell('A1', 'VARIETY INPUT SHEET - Gobind Sugar Mills, Aira', S.banner) +
+      cell('A1', 'VARIETY INPUT SHEET - Gobind Sugar Mill, Aira', S.banner) +
       Array.from({ length: ncol - 1 }, (_, i) => `<c r="${colLetter(i + 2)}1" s="${S.banner}"/>`).join('') +
       `</row>`
   );

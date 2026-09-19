@@ -59,3 +59,8 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Full-resolution source art. The web assets are generated from it and are
+# committed; the originals are large and are not needed to build.
+bg-src.jpg
+zuari-src.png

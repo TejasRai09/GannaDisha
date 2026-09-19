@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserRole, StepNumber } from '../types';
+import { StepNumber } from '../types';
 import {
   Check,
   Users,
@@ -17,14 +17,14 @@ import {
   Layers,
   Flame,
 } from 'lucide-react';
-import { VarietalDataLogo } from './Logos';
 
 interface HeaderProps {
   currentStep: number;
   onSelectStep: (step: number) => void;
   completedSteps: number[];
-  role: UserRole;
-  onRoleChange: (role: UserRole) => void;
+  /** Signed-in user's email, shown beside the sign-out control. */
+  user?: string | null;
+  onSignOut?: () => void;
   isDark?: boolean;
   onToggleTheme?: () => void;
   /** Null until a survey is ingested - the chips stay hidden until then. */
@@ -46,8 +46,8 @@ export const Header: React.FC<HeaderProps> = ({
   currentStep,
   onSelectStep,
   completedSteps,
-  role,
-  onRoleChange,
+  user,
+  onSignOut,
   isDark = false,
   onToggleTheme,
   baseline = null,
@@ -84,9 +84,15 @@ export const Header: React.FC<HeaderProps> = ({
                   rather than inside a solid gradient tile that would fight it.
                   It fills the tile edge to edge - its wordmark is tiny, so every
                   pixel of the 40px slot counts. */}
-              <div className="w-10 h-10 rounded-xl bg-(--accent-subtle) border border-(--accent)/20 flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
-                <VarietalDataLogo className="w-[38px] h-[38px]" title="Varietal Planning System" />
-              </div>
+              {/* The real mark. It carries its own colour, so it sits on the
+                  surface rather than inside a tinted tile that would fight it. */}
+              <img
+                src="/logo-mark-64.v3.png"
+                alt="Ganna Chakra"
+                className="w-10 h-10 object-contain shrink-0"
+                width={128}
+                height={108}
+              />
               <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-(--surface-card) flex items-center justify-center">
                 <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
               </span>
@@ -95,7 +101,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
-                  Gobind Sugar Mills • Aira
+                  Gobind Sugar Mill • Aira
                 </span>
                 <span className="text-[11px] text-(--text-muted) hidden md:inline">
                   Lakhimpur Kheri, Uttar Pradesh
@@ -149,43 +155,24 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            {/* Role Switcher */}
-            <div
-              className="inline-flex bg-(--surface-sunken) p-0.5 rounded-lg border border-(--border)"
-              id="role-switcher"
-            >
-              <button
-                type="button"
-                id="btn-role-plant-team"
-                onClick={() => onRoleChange('plant_team')}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[12px] font-medium transition-all cursor-pointer ${
-                  role === 'plant_team'
-                    ? 'bg-(--surface-card) text-(--text-primary) shadow-sm font-semibold'
-                    : 'text-(--text-secondary) hover:text-(--text-primary)'
-                }`}
-                aria-pressed={role === 'plant_team'}
-                title="Full modeling permissions"
-              >
-                <Users className="w-3.5 h-3.5 text-(--accent)" />
-                <span>Plant Team</span>
-              </button>
-
-              <button
-                type="button"
-                id="btn-role-manager"
-                onClick={() => onRoleChange('manager')}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[12px] font-medium transition-all cursor-pointer ${
-                  role === 'manager'
-                    ? 'bg-emerald-600 text-white shadow-sm font-semibold'
-                    : 'text-(--text-secondary) hover:text-(--text-primary)'
-                }`}
-                aria-pressed={role === 'manager'}
-                title="Executive lock mode"
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Manager</span>
-              </button>
-            </div>
+            {/* The Plant Team / Manager switch used to live here. Everyone who can
+                sign in is a manager now, so there is nothing to switch between. */}
+            {user && (
+              // ml-1 plus a divider: the email used to butt straight against the
+              // Scenarios button and read as one run-on word.
+              <div className="hidden sm:flex items-center gap-2 ml-1 pl-3 border-l border-(--border)">
+                <span className="text-[12px] text-(--text-secondary) truncate max-w-[180px]" title={user}>
+                  {user}
+                </span>
+                <button
+                  type="button"
+                  onClick={onSignOut}
+                  className="text-[12px] font-medium text-(--text-muted) hover:text-(--text-primary) px-2 py-1 rounded-md hover:bg-(--surface-sunken) transition-colors cursor-pointer"
+                >
+                  Sign out
+                </button>
+              </div>
+            )}
 
             {/* Dark / Light Mode Toggle */}
             {onToggleTheme && (

@@ -50,7 +50,7 @@ def fill_row(ws, r, values, input_cols=()):
 def instructions(wb, title, lines):
     ws = wb.create_sheet("Instructions", 0)
     ws.cell(row=1, column=1, value=title).font = TITLE_FONT
-    ws.cell(row=2, column=1, value="Gobind Sugar Mills, Aira - Three-Year Varietal Plan").font = Font(italic=True, color="666666")
+    ws.cell(row=2, column=1, value="Gobind Sugar Mill, Aira - Three-Year Varietal Plan").font = Font(italic=True, color="666666")
     r = 4
     for ln in lines:
         ws.cell(row=r, column=1, value=ln)

@@ -29,6 +29,7 @@ import {
   YAxis,
 } from 'recharts';
 import { FreePlot, BaselineData } from '../types';
+import { decodeBaseline } from '../lib/loadBaseline';
 import { EmptyState } from './EmptyState';
 import { CommandAreaLogo } from './Logos';
 import { AnimatedMetricCard } from './AnimatedMetricCard';
@@ -58,6 +59,8 @@ export const Step1Data: React.FC<Step1DataProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(100);
   const [fileName, setFileName] = useState('');
+  // Set by the Re-upload button, to bring the drop zone back on demand.
+  const [showUploader, setShowUploader] = useState(false);
   const [fileSize, setFileSize] = useState('');
   const [uploadTime, setUploadTime] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -161,52 +164,15 @@ export const Step1Data: React.FC<Step1DataProps> = ({
       showToast('Could not read the survey', 'error', msg);
     };
 
-    // A previously prepared baseline.json is still accepted.
+    // A previously prepared baseline.json is still accepted. Decoding lives in
+    // one place so this and the sign-in auto-load cannot drift apart.
     if (/\.json$/i.test(file.name)) {
       const reader = new FileReader();
       reader.onerror = () => fail('The file could not be opened.');
       reader.onload = () => {
         try {
-          const parsed = JSON.parse(String(reader.result));
-          const b = parsed?.baseline ?? parsed;
-          if (!b || typeof b.surveyedAreaHa !== 'number') throw new Error('not a baseline file');
-          // make_baseline.py writes the variety list beside `baseline`, not inside
-          // it. Without this the metrics load but Step 2 comes up empty.
-          const varieties = b.varietyBreakdown ?? parsed?.varieties ?? [];
-
-          // Free plots are stored as index arrays against three dictionaries -
-          // 62k plots would be 9 MB written out in full, 1.9 MB like this.
-          const fp = parsed?.freePlots;
-          let plots: FreePlot[] | undefined;
-          if (fp?.rows?.length) {
-            const { villages = [], societies = [], varieties: vnames = [], rows } = fp;
-            plots = rows.map(
-              (
-                r: [number, number, string, number, number, number, number?, number?, number?],
-                i: number
-              ) => ({
-                id: `p${i}`,
-                village: villages[r[0]] ?? '',
-                society: societies[r[1]] ?? '',
-                grower: r[2],
-                // 0 upland, 1 lowland, 2 = ratoon with nothing recorded
-                landType:
-                  r[3] === 1 ? ('LOWLAND' as const)
-                  : r[3] === 2 ? ('UNKNOWN' as const)
-                  : ('UPLAND' as const),
-                growerLowlandShare: r[6] ?? -1,
-                villageLowlandShare: r[7] ?? -1,
-                cropStage: (['PLANT', 'AUTUMN', 'RATOON', 'RATOON II'] as const)[r[8] ?? 2],
-                areaHa: r[4],
-                currentVariety: vnames[r[5]] ?? '',
-              })
-            );
-          }
-
-          finish(
-            { ...b, varietyBreakdown: varieties, dataQualityFlags: b.dataQualityFlags ?? [] },
-            plots
-          );
+          const { baseline: b, freePlots } = decodeBaseline(JSON.parse(String(reader.result)));
+          finish(b, freePlots);
         } catch (err) {
           fail(err instanceof Error ? err.message : 'Unreadable JSON.');
         }
@@ -285,14 +251,23 @@ export const Step1Data: React.FC<Step1DataProps> = ({
           </div>
           <p className="text-[14px] text-(--text-secondary) max-w-3xl leading-relaxed">
             {baseline
-              ? 'GPS field measurement census across Gobind Sugar Mills bonded command area (Aira, Lakhimpur Kheri).'
+              ? 'GPS field measurement census across Gobind Sugar Mill bonded command area (Aira, Lakhimpur Kheri).'
               : 'Start by uploading the plot-wise survey workbook exported from the mill ERP. Every figure in this system is derived from it.'}
           </p>
         </div>
 
         {baseline && (
           <div className="flex items-center gap-3 shrink-0">
-            <button type="button" onClick={() => fileInputRef.current?.click()} className="btn-secondary">
+            <button
+              type="button"
+              onClick={() => {
+                // Show the drop zone as well as opening the picker, so a drag
+                // works too and it is clear where a file would land.
+                setShowUploader(true);
+                fileInputRef.current?.click();
+              }}
+              className="btn-secondary"
+            >
               <RefreshCw className="w-4 h-4" />
               <span className="font-semibold">Re-upload</span>
             </button>
@@ -305,7 +280,13 @@ export const Step1Data: React.FC<Step1DataProps> = ({
       </div>
 
       {/* ---------------------------- upload zone ---------------------------- */}
+      {/* The season's survey is loaded automatically when the deployment ships
+          one, so leading with an empty drop zone would ask for a file that is
+          already in. It is kept for an upload mid-season - the Re-upload button
+          above opens it - but it does not take the top of the screen once the
+          figures are there. */}
       <div
+        hidden={Boolean(baseline) && !isUploading && !showUploader}
         onDragOver={(e) => {
           e.preventDefault();
           setIsDragging(true);

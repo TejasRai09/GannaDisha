@@ -130,7 +130,7 @@ def table(headers, rows, widths=None):
 p("HOW EVERY VARIABLE IS USED", bold=True, size=24, color=GREEN, align=WD_ALIGN_PARAGRAPH.CENTER)
 p("The complete logic of the Varietal Planning engine, with worked examples",
   size=13, color=GREY, align=WD_ALIGN_PARAGRAPH.CENTER)
-p("Gobind Sugar Mills, Aira - figures from the 2026-27 plot survey",
+p("Gobind Sugar Mill, Aira - figures from the 2026-27 plot survey",
   size=11, color=GREY, align=WD_ALIGN_PARAGRAPH.CENTER)
 doc.add_paragraph()
 

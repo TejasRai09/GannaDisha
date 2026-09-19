@@ -147,7 +147,7 @@ def rule():
 p("VARIETAL PLANNING SYSTEM", bold=True, size=26, color=GREEN, align=WD_ALIGN_PARAGRAPH.CENTER)
 p("Steps 1 to 3 - what each screen does, and why", size=14, color=GREY,
   align=WD_ALIGN_PARAGRAPH.CENTER)
-p("Gobind Sugar Mills, Aira - Lakhimpur Kheri, Uttar Pradesh", size=11, color=GREY,
+p("Gobind Sugar Mill, Aira - Lakhimpur Kheri, Uttar Pradesh", size=11, color=GREY,
   align=WD_ALIGN_PARAGRAPH.CENTER)
 doc.add_paragraph()
 

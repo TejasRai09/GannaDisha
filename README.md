@@ -1,6 +1,6 @@
-# GannaDisha — Varietal Planning System
+# Ganna Chakra — Varietal Planning System
 
-Three-year sugarcane varietal planning for **Gobind Sugar Mills, Aira** (Lakhimpur Kheri, Uttar Pradesh).
+Three-year sugarcane varietal planning for **Gobind Sugar Mill, Aira** (Lakhimpur Kheri, Uttar Pradesh).
 
 Reads the mill's plot-wise ERP survey and produces a plan down to the individual
 plot: which variety to grow, where, and in which year.

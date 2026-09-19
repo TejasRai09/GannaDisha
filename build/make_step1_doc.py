@@ -119,7 +119,7 @@ p("STEP 1 - BASELINE DATA", bold=True, size=26, color=GREEN, align=WD_ALIGN_PARA
 p("What this screen is for, and every calculation it does", size=14, color=GREY,
   align=WD_ALIGN_PARAGRAPH.CENTER)
 doc.add_paragraph()
-p("Cane Varietal Planning System  |  Gobind Sugar Mills, Aira", align=WD_ALIGN_PARAGRAPH.CENTER)
+p("Cane Varietal Planning System  |  Gobind Sugar Mill, Aira", align=WD_ALIGN_PARAGRAPH.CENTER)
 p("Written so anyone can follow it. Every number here can be checked on a calculator.",
   size=10, color=GREY, align=WD_ALIGN_PARAGRAPH.CENTER)
 doc.add_page_break()
