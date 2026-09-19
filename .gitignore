@@ -26,6 +26,19 @@ web/data/
 *.docx
 
 # ---------------------------------------------------------------------------
+# CREDENTIALS - never committed.
+#
+# The Lightsail .pem sits in this folder. It was untracked only by luck; the
+# next `git add -A` would have published an SSH private key to a public repo.
+# ---------------------------------------------------------------------------
+*.pem
+*.key
+*.ppk
+.env
+.env.*
+!.env.example
+
+# ---------------------------------------------------------------------------
 # Build output and dependencies
 # ---------------------------------------------------------------------------
 node_modules/
