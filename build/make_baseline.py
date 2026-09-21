@@ -70,6 +70,84 @@ def count_physical_plots(df: pd.DataFrame, ok: np.ndarray) -> int:
     return int(pd.factorize(key)[0].max() + 1)
 
 
+def breakdowns(df: pd.DataFrame, ok: np.ndarray, varieties: list) -> dict:
+    """The detail tables behind the headline figures on Step 1.
+
+    Every metric card on that screen opens into one of these. The browser
+    worker builds them when a survey is uploaded; this builds the same three
+    tables, to the same shape, for the copy that ships with the deployment.
+    Without them the cards open onto an empty panel, which reads as a card
+    that does not open at all.
+    """
+    d = df.copy()
+
+    # A field is a set of GPS corners, not a row - rows are grower shares, and
+    # several of them can describe one physical field.
+    lat = d[["lat1", "lat2", "lat3", "lat4"]].to_numpy(float)
+    lon = d[["lon1", "lon2", "lon3", "lon4"]].to_numpy(float)
+    corners = pd.MultiIndex.from_arrays(
+        [np.round(lat[:, i], 6) for i in range(4)] + [np.round(lon[:, i], 6) for i in range(4)]
+    )
+    d["_field"] = pd.factorize(corners)[0]
+    d.loc[~ok, "_field"] = -1          # no usable GPS: not a countable field
+    d["_grower"] = (
+        d.society_code.astype(str) + "/" + d.grower_village_code.astype(str)
+        + "/" + d.grower_code.astype(str)
+    )
+
+    def fields(g):
+        return int(g[g >= 0].nunique())
+
+    vil = (
+        d.groupby("plot_village")
+        .agg(
+            society=("society", "first"),
+            areaHa=("area_ha", "sum"),
+            fields=("_field", fields),
+            growers=("_grower", "nunique"),
+            records=("area_ha", "size"),
+        )
+        .reset_index()
+        .rename(columns={"plot_village": "name"})
+        .sort_values("areaHa", ascending=False)
+    )
+
+    soc = (
+        d.groupby("society")
+        .agg(
+            areaHa=("area_ha", "sum"),
+            villages=("plot_village", "nunique"),
+            fields=("_field", fields),
+            growers=("_grower", "nunique"),
+            records=("area_ha", "size"),
+        )
+        .reset_index()
+        .rename(columns={"society": "name"})
+        .sort_values("areaHa", ascending=False)
+    )
+
+    return {
+        "villageBreakdown": [
+            {
+                "name": str(r.name), "society": str(r.society),
+                "areaHa": round(float(r.areaHa), 1),
+                "fields": int(r.fields), "growers": int(r.growers),
+                "records": int(r.records),
+            }
+            for r in vil.itertuples(index=False)
+        ],
+        "societyBreakdown": [
+            {
+                "name": str(r.name), "areaHa": round(float(r.areaHa), 1),
+                "villages": int(r.villages), "fields": int(r.fields),
+                "growers": int(r.growers), "records": int(r.records),
+            }
+            for r in soc.itertuples(index=False)
+        ],
+        "varietyBreakdown": varieties,
+    }
+
+
 def build_quality_flags(df: pd.DataFrame, dropped: int) -> list:
     """Only report what the data actually shows - no fixed list of warnings."""
     flags = []
@@ -258,6 +336,10 @@ def main():
         for r in vs.itertuples()
         if float(r.areaHa) > 0
     ]
+
+    # The detail tables behind each metric card. They need `varieties`, which is
+    # why this happens here rather than inside the `baseline` literal above.
+    baseline.update(breakdowns(df, ok, varieties))
 
     # Plots finishing ratoon, for Step 6. Stored as index arrays against three
     # dictionaries rather than 62k objects - 1.9 MB instead of 9.3 MB, which is

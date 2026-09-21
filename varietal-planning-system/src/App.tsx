@@ -40,7 +40,8 @@ import { Step6Allocation } from './components/Step6Allocation';
 import { ScenarioCompareModal } from './components/ScenarioCompareModal';
 import { allocatePlots } from './engine/allocate';
 import { inferLandTypes } from './engine/inferLandType';
-import { fetchDeployedBaseline } from './lib/loadBaseline';
+import { fetchDeployedBaseline, fetchDeployedPreset } from './lib/loadBaseline';
+import type { DeployedPreset } from './lib/loadBaseline';
 
 
 /**
@@ -112,27 +113,68 @@ export default function App() {
    * on load and Step 1 opens already filled in. Where there is none - a local
    * checkout, say - nothing happens and Step 1 asks for an upload as before.
    */
-  const applyBaseline = React.useCallback((b: BaselineData, plots?: FreePlot[]) => {
-    setBaseline(b);
-    // The survey is the source of the variety list - Step 2 starts from what is
-    // actually in the ground, not a blank page.
-    const reg = registryFromBaseline(b);
-    setVarieties(reg);
-    setStrategies(
-      Object.fromEntries(
-        reg.map((v) => [
-          v.id,
-          { varietyId: v.id, strategy: v.strategy, retentionPreset: 'BALANCED' as const, retentionPct: 50 },
-        ])
-      )
-    );
-    if (plots) setFreePlots(plots);
-  }, []);
+  const applyBaseline = React.useCallback(
+    (b: BaselineData, plots?: FreePlot[], preset?: DeployedPreset | null) => {
+      setBaseline(b);
+
+      // The survey is the source of the variety list - Step 2 starts from what
+      // is actually in the ground, not a blank page.
+      const reg = registryFromBaseline(b);
+
+      // A preset fills in what the survey cannot say by itself. It is matched
+      // by id, and only over varieties the survey actually found: a preset
+      // built against last season's survey must not add varieties that are no
+      // longer in the ground, nor drop ones that have appeared since.
+      const active = preset === undefined ? presetRef.current : preset;
+      const byId = new Map((active?.varieties ?? []).map((v) => [v.id, v]));
+      const merged = reg.map((v) => {
+        const p = byId.get(v.id);
+        // Area and the measured columns always come from this season's survey,
+        // never from the preset - the preset is judgement, the survey is fact.
+        return p
+          ? {
+              ...v,
+              ...p,
+              currentAreaHa: v.currentAreaHa,
+              measuredLowlandPct: v.measuredLowlandPct,
+              surveyRecords: v.surveyRecords,
+              maturity: v.maturity,
+            }
+          : v;
+      });
+      setVarieties(merged);
+
+      setStrategies(
+        Object.fromEntries(
+          merged.map((v) => {
+            const p = active?.strategies?.[v.id];
+            return [
+              v.id,
+              p ?? {
+                varietyId: v.id,
+                strategy: v.strategy,
+                retentionPreset: 'BALANCED' as const,
+                retentionPct: 50,
+              },
+            ];
+          })
+        )
+      );
+
+      if (active?.parameters) setParams((prev) => ({ ...prev, ...active.parameters }));
+      if (active) setPreset(active);
+      if (plots) setFreePlots(plots);
+    },
+    []
+  );
 
   useEffect(() => {
     const ac = new AbortController();
-    fetchDeployedBaseline(ac.signal).then((decoded) => {
-      if (decoded) applyBaseline(decoded.baseline, decoded.freePlots);
+    Promise.all([
+      fetchDeployedBaseline(ac.signal),
+      fetchDeployedPreset(ac.signal),
+    ]).then(([decoded, preset]) => {
+      if (decoded) applyBaseline(decoded.baseline, decoded.freePlots, preset);
     });
     return () => ac.abort();
   }, [applyBaseline]);
@@ -164,6 +206,13 @@ export default function App() {
   const [baseline, setBaseline] = useState<BaselineData | null>(INITIAL_BASELINE);
 
   const [varieties, setVarieties] = useState<VarietyRecord[]>(INITIAL_VARIETIES);
+
+  // The worked scenario the deployment shipped, if any. Held so the screens
+  // can say which of the figures in front of you are still provisional, and
+  // so a mid-season re-upload does not silently throw the plan away.
+  const [preset, setPreset] = useState<DeployedPreset | null>(null);
+  const presetRef = React.useRef<DeployedPreset | null>(null);
+  React.useEffect(() => { presetRef.current = preset; }, [preset]);
 
   // Planning Parameters State
   const [params, setParams] = useState<ParametersState>(DEFAULT_PARAMETERS);
@@ -349,6 +398,7 @@ export default function App() {
               onAddVariety={handleAddVariety}
               onUpdateVariety={handleUpdateVariety}
               onReplaceVarieties={setVarieties}
+              provisionalFields={preset?.provisionalFields}
               surveyFileName={baseline?.fileName}
               onProceedToParameters={() => setCurrentStep(3)}
               isDark={isDark}
@@ -439,6 +489,7 @@ export default function App() {
               savedScenarios={savedScenarios}
               onSaveScenario={handleSaveScenario}
               onLoadScenario={handleLoadScenario}
+              provisionalFields={preset?.provisionalFields}
               onProceedToAllocation={() => setCurrentStep(6)}
               isDark={isDark}
             />

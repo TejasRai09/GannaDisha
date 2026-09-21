@@ -7,6 +7,7 @@ import {
   VarietyStrategy,
 } from '../types';
 import { AddVarietyModal } from './AddVarietyModal';
+import { ProvisionalNotice } from './ProvisionalNotice';
 import {
   Plus,
   Download,
@@ -43,6 +44,8 @@ interface Step2VarietiesProps {
   /** Named on the generated template so the file records where it came from. */
   surveyFileName?: string;
   onProceedToParameters: () => void;
+  /** Fields in the shipped scenario that are placeholders, not mill figures. */
+  provisionalFields?: string[];
   isDark?: boolean;
 }
 
@@ -53,6 +56,7 @@ export const Step2Varieties: React.FC<Step2VarietiesProps> = ({
   onReplaceVarieties,
   surveyFileName,
   onProceedToParameters,
+  provisionalFields,
   isDark = false,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -234,6 +238,11 @@ export const Step2Varieties: React.FC<Step2VarietiesProps> = ({
 
   return (
     <div className="space-y-6 pb-16 screen-fade-in">
+      <ProvisionalNotice
+        fields={provisionalFields}
+        consequence="Overwrite them here, or upload the filled Step 2 sheet."
+      />
+
       {/* Screen Header */}
       <div className="bg-(--surface-card) p-5 rounded-[12px] border border-(--border) shadow-(--shadow-sm) flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

@@ -8,6 +8,7 @@ import {
   ComplianceCheck,
   SavedScenario,
 } from '../types';
+import { ProvisionalNotice } from './ProvisionalNotice';
 import { ScenarioCompareModal } from './ScenarioCompareModal';
 import { AnimatedMetricCard } from './AnimatedMetricCard';
 import { TableViewToggle } from './TableViewToggle';
@@ -53,6 +54,8 @@ interface Step5ResultsProps {
   onSaveScenario: (name: string, desc: string) => void;
   onLoadScenario: (scenario: SavedScenario) => void;
   onProceedToAllocation: () => void;
+  /** Fields in the shipped scenario that are placeholders, not mill figures. */
+  provisionalFields?: string[];
   isDark?: boolean;
 }
 
@@ -100,6 +103,7 @@ export const Step5Results: React.FC<Step5ResultsProps> = ({
   onSaveScenario,
   onLoadScenario,
   onProceedToAllocation,
+  provisionalFields,
   isDark = false,
 }) => {
   const [isScenarioModalOpen, setIsScenarioModalOpen] = useState(false);
@@ -124,6 +128,9 @@ export const Step5Results: React.FC<Step5ResultsProps> = ({
       caneDivertedToSeedTonnes: 0,
     };
 
+  // projections[0] is the base season, so Year 1 is index 1.
+  const y1Item = projections[1] || baseItem;
+
   const sucroseDelta = (y3Item.blendedSucrosePct - baseItem.blendedSucrosePct).toFixed(2);
   const recoveryDelta = (y3Item.estimatedRecoveryPct - baseItem.estimatedRecoveryPct).toFixed(2);
 
@@ -136,8 +143,16 @@ export const Step5Results: React.FC<Step5ResultsProps> = ({
     (incrementalSugarMT * 1000 * params.sugarPriceRsPerKg) / 10000000
   ).toFixed(1);
 
-  // Calculate total seed cane diverted in Year 1
-  const totalSeedDivertedQtl = seedBalances.reduce((acc, b) => acc + b.seedRequiredQtl, 0);
+  // Seed cane set aside for Year 1, taken from the projection's own figure.
+  //
+  // This used to sum seedBalances.seedRequiredQtl, which is a different
+  // quantity: that column counts only the seed the MILL has to supply, and the
+  // engine holds that a variety farmers already grow supplies its own. Every
+  // variety in the survey is already out there, so the sum was zero and the
+  // card read "0 qtl - ~0 MT cane set aside" under a plan that replants some
+  // thirty thousand hectares. The projection counts every hectare replanted,
+  // whoever the seed comes from, which is what this card claims to show.
+  const totalSeedDivertedQtl = Math.round((y1Item.caneDivertedToSeedTonnes || 0) * 10);
 
   // Format chart data
   const chartData = projections.map((p) => {
@@ -204,6 +219,11 @@ export const Step5Results: React.FC<Step5ResultsProps> = ({
 
   return (
     <div className="space-y-6 pb-28 screen-fade-in">
+      <ProvisionalNotice
+        fields={provisionalFields}
+        consequence="Recovery and the money figure below move with them, so treat both as an illustration of the method rather than a forecast."
+      />
+
       {/* Screen Header */}
       <div className="bg-(--surface-card) p-5 rounded-[12px] border border-(--border) shadow-(--shadow-sm) flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

@@ -17,6 +17,10 @@
 
 baseline.json
 varietal-planning-system/public/baseline.json
+# The worked scenario carries per-variety areas for the command area.
+# Rebuild it with build/make_preset.py; do not publish it.
+preset.json
+varietal-planning-system/public/preset.json
 plan_inputs/
 plan_outputs/
 build/cache/

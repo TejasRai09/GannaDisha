@@ -260,14 +260,44 @@ export function calculateYearlyProjections(
 
       yearBreakdown[v.id] = targetArea;
       yearTotalArea += targetArea;
+    });
 
-      // Seed required & update next cycle seed stock
-      const freshPlantHa = Math.round(targetArea * freshPlantRatio);
-      const seedUsed = calculateSeedRequiredQtl(freshPlantHa, seedRate);
-      totalSeedUsedQtl += seedUsed;
+    // The land is finite, and nothing above knew that.
+    //
+    // Each variety's target is worked out on its own - its strategy, its seed,
+    // its own 40% ceiling - and the results were simply added up. Eighty-six
+    // varieties each allowed to grow independently summed to 131,703 ha against
+    // a 56,491 ha command area: more than twice the land that exists. A varietal
+    // plan redistributes the command area between varieties, it does not create
+    // new ground.
+    //
+    // So where the targets ask for more land than there is, every variety is
+    // scaled back by the same factor. That keeps the mix the strategies asked
+    // for - which is what the plan is actually about - while fitting what can
+    // be planted. Asking for less than the command area is left alone: a plan
+    // that shrinks the crop is a real answer, not an error.
+    if (yearTotalArea > totalCommandArea && yearTotalArea > 0) {
+      const fit = totalCommandArea / yearTotalArea;
+      let scaled = 0;
+      varieties.forEach((v) => {
+        yearBreakdown[v.id] = Math.round((yearBreakdown[v.id] || 0) * fit);
+        scaled += yearBreakdown[v.id];
+      });
+      yearTotalArea = scaled;
+    }
+
+    // Seed is costed against the area actually planned, so it has to come after
+    // the fit above - charging the mill for seed it was never going to plant
+    // was how the old single pass got it wrong.
+    varieties.forEach((v) => {
+      const strat = strategies[v.id];
+      const area = yearBreakdown[v.id] || 0;
+
+      const freshPlantHa = Math.round(area * freshPlantRatio);
+      totalSeedUsedQtl += calculateSeedRequiredQtl(freshPlantHa, seedRate);
 
       // Seed generated for next year
-      const seedHarvestHa = Math.round(targetArea * ((strat.retentionPct || 50) / 100) * 0.15);
+      const seedHarvestHa = Math.round(area * ((strat?.retentionPct ?? 50) / 100) * 0.15);
       // Cane produced per hectare. Use the variety's own yield where Step 2 has it,
       // otherwise fall back to the old flat assumption of 800 qtl/ha.
       const yieldQtlPerHa = v.caneYieldTha ? v.caneYieldTha * 10 : 800;
@@ -277,7 +307,6 @@ export function calculateYearlyProjections(
       currentSeedStock[v.id] = Math.max(0, Math.round(newSeedGenQtl));
     });
 
-    // Normalize slightly to fit command area proportion
     let weightedSucrose = 0;
     varieties.forEach((v) => {
       const a = yearBreakdown[v.id] || 0;
@@ -502,7 +531,19 @@ export function calculateCompliance(
 
   // 4. Replantable land fit - derived from the crop-cycle sliders so that
   //    changing the ratoon assumptions actually moves the budget.
-  const totalFreshPlanting = seedBalances.reduce((sum, b) => sum + b.areaToPlantHa, 0);
+  // Every hectare that has to be planted fresh, not only the hectares the mill
+  // supplies seed for.
+  //
+  // This used to sum seedBalances.areaToPlantHa, which is zero for any variety
+  // already in the ground - the engine holds that those multiply from the
+  // farmer's own crop. Every variety in the survey is already in the ground, so
+  // the total was always 0, and a check called "plan fits replantable land"
+  // passed by comparing nothing against 23,000 ha. It now asks the question it
+  // says it asks: how much land does this plan need to replant, against how
+  // much comes free.
+  const totalFreshPlanting = Math.round(
+    (year1.totalAreaHa || params.commandAreaHa) * getFreshPlantRatio(params)
+  );
   // Sized off the command area, not the projection total: how much land comes
   // out of ratoon is a fact about the land, not about how much of it the plan
   // happens to cover.

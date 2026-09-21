@@ -10,11 +10,35 @@
  * objects. Written out in full that would be 9 MB; like this it is under two.
  */
 
-import type { BaselineData, FreePlot } from '../types';
+import type {
+  BaselineData,
+  FreePlot,
+  ParametersState,
+  VarietyRecord,
+  VarietyStrategySetting,
+} from '../types';
 
 export interface DecodedBaseline {
   baseline: BaselineData;
   freePlots?: FreePlot[];
+}
+
+/**
+ * The worked scenario the deployment opens on, from build/make_preset.py.
+ *
+ * Steps 2, 3 and 4 arrive filled in so the app opens on a complete plan
+ * rather than on six screens waiting for input. Most of it is measured from
+ * the survey; `provisionalFields` names the handful that are not, and the app
+ * says so on screen rather than letting them pass as mill figures.
+ */
+export interface DeployedPreset {
+  provisional?: boolean;
+  provisionalFields?: string[];
+  note?: string;
+  generatedAt?: string;
+  varieties: VarietyRecord[];
+  parameters?: Partial<ParametersState>;
+  strategies?: Record<string, VarietyStrategySetting>;
 }
 
 /** Row shape: village, society, grower, land, area, variety, shares, stage. */
@@ -53,7 +77,16 @@ export function decodeBaseline(parsed: any): DecodedBaseline {
   }
 
   return {
-    baseline: { ...b, varietyBreakdown: varieties, dataQualityFlags: b.dataQualityFlags ?? [] },
+    baseline: {
+      ...b,
+      varietyBreakdown: varieties,
+      dataQualityFlags: b.dataQualityFlags ?? [],
+      // The tables behind each metric card on Step 1. Older baseline files
+      // predate them; an empty array opens an empty panel, which at least
+      // cannot throw.
+      villageBreakdown: b.villageBreakdown ?? [],
+      societyBreakdown: b.societyBreakdown ?? [],
+    },
     freePlots,
   };
 }
@@ -72,6 +105,26 @@ export async function fetchDeployedBaseline(
     const res = await fetch('/baseline.json', { credentials: 'same-origin', signal });
     if (!res.ok) return null;
     return decodeBaseline(await res.json());
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch the worked scenario, if the deployment ships one.
+ *
+ * Null on anything unexpected, for the same reason as the baseline above: a
+ * deployment without a preset is a normal state, and the app should fall back
+ * to the survey-only registry rather than show an error.
+ */
+export async function fetchDeployedPreset(
+  signal?: AbortSignal
+): Promise<DeployedPreset | null> {
+  try {
+    const res = await fetch('/preset.json', { credentials: 'same-origin', signal });
+    if (!res.ok) return null;
+    const p = await res.json();
+    return Array.isArray(p?.varieties) && p.varieties.length ? (p as DeployedPreset) : null;
   } catch {
     return null;
   }
