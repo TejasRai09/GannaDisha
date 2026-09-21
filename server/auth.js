@@ -120,12 +120,27 @@ function claims(idToken) {
 /**
  * Who is allowed in.
  *
- * Being in the Zuari tenant is not enough - the whole company is in it. Only
- * the named planning accounts get through, and everyone who does is a manager.
+ * Anyone with an Adventz work account. `allowDomains` carries the domains that
+ * get in on sight; `allow` carries individual addresses outside them, for a
+ * consultant or an auditor who needs access without an Adventz mailbox.
+ *
+ * The domain is compared against the part after the LAST "@", and it has to
+ * match in full - a substring test would let someone at "notadventz.com"
+ * through, and a tenant guest can hold an address at any domain at all.
+ *
+ * With no domains configured this falls back to the named list alone, which is
+ * how it behaved before and is the safer way to fail.
  */
 function isAllowed(email) {
-  const allow = (config().allow || []).map((x) => String(x).toLowerCase());
-  return allow.includes(String(email || '').toLowerCase());
+  const e = String(email || '').toLowerCase().trim();
+  if (!e.includes('@')) return false;
+
+  const c = config();
+  const domain = e.split('@').pop();
+  const domains = (c.allowDomains || []).map((x) => String(x).toLowerCase().trim());
+  if (domains.includes(domain)) return true;
+
+  return (c.allow || []).map((x) => String(x).toLowerCase()).includes(e);
 }
 
 // ------------------------------------------------------------------- server
@@ -297,7 +312,10 @@ const server = http.createServer(async (req, res) => {
     if (!email) return fail('Microsoft did not return an email address for that account.');
     if (!isAllowed(email)) {
       console.log(`[auth] refused  ${email}  from ${ip}`);
-      return fail(`${email} is not on the access list for this tool.`);
+      return fail(
+        `${email} cannot use this tool. Sign in with your Adventz work account, `
+        + `or ask the cane planning team to add this address.`
+      );
     }
 
     const token = sign({ email, name, exp: Date.now() + SESSION_DAYS * 86400_000 });
@@ -318,11 +336,13 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, '127.0.0.1', () => {
   const c = config();
+  const doms = (c.allowDomains || []).join(', ');
   const n = (c.allow || []).length;
   console.log(
     `[auth] listening on 127.0.0.1:${PORT}  `
     + `tenant=${c.tenantId ? c.tenantId.slice(0, 8) + '...' : 'NOT SET'}  `
-    + `${n} allowed account${n === 1 ? '' : 's'}  `
+    + (doms ? `allow=@${doms}` : 'allow=named only')
+    + (n ? ` +${n} named` : '') + '  '
     + `${c.clientSecret ? 'confidential' : 'PKCE, no secret'}`
   );
 });
