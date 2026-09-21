@@ -16,6 +16,7 @@ import {
   Activity,
   Layers,
   Flame,
+  UserRound,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -54,6 +55,24 @@ export const Header: React.FC<HeaderProps> = ({
   baseYear = '',
   onOpenCompareModal,
 }) => {
+  // Phone-only account menu. Closes on an outside tap or Escape, or it
+  // would sit open over whichever step you moved to next.
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountRef = React.useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!accountOpen) return;
+    const onDown = (e: PointerEvent) => {
+      if (!accountRef.current?.contains(e.target as Node)) setAccountOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setAccountOpen(false); };
+    document.addEventListener('pointerdown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [accountOpen]);
+
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
@@ -171,6 +190,52 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   Sign out
                 </button>
+              </div>
+            )}
+
+            {/* Account, on a phone.
+                The block above is `hidden sm:flex`, so below 640px both the
+                address and the sign-out went with it and there was no way off
+                the app on a phone. The same two things live in here instead -
+                a menu rather than a row, because the address does not fit
+                beside the other controls at that width. */}
+            {user && (
+              <div className="relative sm:hidden" ref={accountRef}>
+                <button
+                  type="button"
+                  onClick={() => setAccountOpen((o) => !o)}
+                  aria-haspopup="menu"
+                  aria-expanded={accountOpen}
+                  aria-label="Account"
+                  className="w-8 h-8 rounded-lg border border-(--border) bg-(--surface-sunken) hover:bg-(--border) text-(--text-secondary) flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  <UserRound className="w-4 h-4" />
+                </button>
+
+                {accountOpen && (
+                  <div
+                    role="menu"
+                    className="absolute right-0 top-[38px] z-50 w-[230px] rounded-[12px] border border-(--border) bg-(--surface-card) shadow-(--shadow-md) p-1.5"
+                  >
+                    <p
+                      className="px-2.5 pt-1.5 pb-2 text-[12px] text-(--text-secondary) break-all leading-snug"
+                      title={user}
+                    >
+                      {user}
+                    </p>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setAccountOpen(false);
+                        onSignOut?.();
+                      }}
+                      className="w-full text-left px-2.5 py-2 rounded-[8px] text-[13px] font-medium text-(--text-primary) hover:bg-(--surface-sunken) border-t border-(--border) mt-0.5 pt-2.5 transition-colors cursor-pointer"
+                    >
+                      Sign out
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
