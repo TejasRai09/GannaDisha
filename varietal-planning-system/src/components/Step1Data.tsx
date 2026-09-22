@@ -35,6 +35,7 @@ import { CommandAreaLogo } from './Logos';
 import { AnimatedMetricCard } from './AnimatedMetricCard';
 import { TableViewToggle } from './TableViewToggle';
 import { MetricDetailModal, DetailColumn } from './MetricDetailModal';
+import { DataCoverage, DataAudit } from './DataCoverage';
 import { useToast } from './Toast';
 import { CHART_PALETTE_LIGHT, CHART_PALETTE_DARK } from '../utils/theme';
 
@@ -46,9 +47,12 @@ interface Step1DataProps {
   onFreePlotsLoaded?: (plots: FreePlot[]) => void;
   onProceedToVarieties: () => void;
   isDark?: boolean;
+  /** Combined findings across the three survey files, from make_data_audit.py. */
+  dataAudit?: DataAudit | null;
 }
 
 export const Step1Data: React.FC<Step1DataProps> = ({
+  dataAudit,
   baseline,
   onBaselineLoaded,
   onFreePlotsLoaded,
@@ -512,6 +516,8 @@ export const Step1Data: React.FC<Step1DataProps> = ({
               </div>
             </div>
           </div>
+
+          <DataCoverage audit={dataAudit} />
 
           {/* --------------------- charts + data quality --------------------- */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

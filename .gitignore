@@ -21,6 +21,9 @@ varietal-planning-system/public/baseline.json
 # Rebuild it with build/make_preset.py; do not publish it.
 preset.json
 varietal-planning-system/public/preset.json
+# Combined three-file findings; rebuild with build/make_data_audit.py.
+data_audit.json
+varietal-planning-system/public/data_audit.json
 plan_inputs/
 plan_outputs/
 build/cache/

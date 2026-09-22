@@ -111,6 +111,23 @@ export async function fetchDeployedBaseline(
 }
 
 /**
+ * Fetch the three-file data audit, if the deployment ships one.
+ *
+ * Optional like the others: without it Step 1 simply omits the coverage
+ * panel rather than showing an error.
+ */
+export async function fetchDataAudit(signal?: AbortSignal): Promise<any | null> {
+  try {
+    const res = await fetch('/data_audit.json', { credentials: 'same-origin', signal });
+    if (!res.ok) return null;
+    const d = await res.json();
+    return d?.coverage ? d : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Fetch the worked scenario, if the deployment ships one.
  *
  * Null on anything unexpected, for the same reason as the baseline above: a

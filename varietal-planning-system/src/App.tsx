@@ -40,7 +40,7 @@ import { Step6Allocation } from './components/Step6Allocation';
 import { ScenarioCompareModal } from './components/ScenarioCompareModal';
 import { allocatePlots } from './engine/allocate';
 import { inferLandTypes } from './engine/inferLandType';
-import { fetchDeployedBaseline, fetchDeployedPreset } from './lib/loadBaseline';
+import { fetchDeployedBaseline, fetchDeployedPreset, fetchDataAudit } from './lib/loadBaseline';
 import type { DeployedPreset } from './lib/loadBaseline';
 
 
@@ -173,8 +173,10 @@ export default function App() {
     Promise.all([
       fetchDeployedBaseline(ac.signal),
       fetchDeployedPreset(ac.signal),
-    ]).then(([decoded, preset]) => {
+      fetchDataAudit(ac.signal),
+    ]).then(([decoded, preset, audit]) => {
       if (decoded) applyBaseline(decoded.baseline, decoded.freePlots, preset);
+      if (audit) setDataAudit(audit);
     });
     return () => ac.abort();
   }, [applyBaseline]);
@@ -211,6 +213,8 @@ export default function App() {
   // can say which of the figures in front of you are still provisional, and
   // so a mid-season re-upload does not silently throw the plan away.
   const [preset, setPreset] = useState<DeployedPreset | null>(null);
+  // What the three survey files together say. Shown on Step 1.
+  const [dataAudit, setDataAudit] = useState<any | null>(null);
   const presetRef = React.useRef<DeployedPreset | null>(null);
   React.useEffect(() => { presetRef.current = preset; }, [preset]);
 
@@ -369,6 +373,7 @@ export default function App() {
         >
           {currentStep === 1 && (
             <Step1Data
+              dataAudit={dataAudit}
               baseline={baseline}
               onBaselineLoaded={(b) => applyBaseline(b)}
               onFreePlotsLoaded={setFreePlots}
