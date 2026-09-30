@@ -168,6 +168,45 @@ export default function App() {
     []
   );
 
+  /**
+   * A filled Step 2 sheet has landed.
+   *
+   * It carries more than agronomy: Strategy, and now Change per Year and
+   * Grower Uptake. Those live on the Step 4 settings rather than on the
+   * variety, so replacing the registry alone would leave Step 4 showing
+   * whatever it held before - the sheet would say EXPAND and the engine would
+   * go on holding. Rebuild the settings from what arrived, keeping any dial
+   * the sheet left blank.
+   */
+  const applyVarietySheetUpload = React.useCallback((next: VarietyRecord[]) => {
+    setVarieties(next);
+    setStrategies((prev) => {
+      const out: Record<string, VarietyStrategySetting> = {};
+      next.forEach((v) => {
+        const was = prev[v.id];
+        const retention =
+          v.strategy === 'EXPAND' || v.strategy === 'INTRODUCE-NEW' ? 70
+          : v.strategy === 'HOLD' ? 50
+          : v.strategy === 'REDUCE' ? 30
+          : 0;
+        out[v.id] = {
+          varietyId: v.id,
+          strategy: v.strategy,
+          retentionPreset: was?.retentionPreset ?? 'BALANCED',
+          retentionPct: was?.retentionPct ?? retention,
+          yoyChangePct: v.yoyChangePct ?? was?.yoyChangePct,
+          // Blank in the sheet means derive it, and farmer acceptance is the
+          // best guide we have: a variety growers already like spreads faster.
+          growerUptakePct:
+            v.growerUptakePct ??
+            was?.growerUptakePct ??
+            [2, 2, 4, 7, 11, 16][Math.max(0, Math.min(5, Math.round(v.farmerAcceptance || 3)))],
+        };
+      });
+      return out;
+    });
+  }, []);
+
   useEffect(() => {
     const ac = new AbortController();
     Promise.all([
@@ -402,7 +441,7 @@ export default function App() {
               varieties={varieties}
               onAddVariety={handleAddVariety}
               onUpdateVariety={handleUpdateVariety}
-              onReplaceVarieties={setVarieties}
+              onReplaceVarieties={applyVarietySheetUpload}
               provisionalFields={preset?.provisionalFields}
               surveyFileName={baseline?.fileName}
               onProceedToParameters={() => setCurrentStep(3)}

@@ -56,6 +56,10 @@ export interface VarietyRecord {
   /** Tonnes per hectare. Without it the plan has no tonnage, only area. */
   caneYieldTha?: number;
   notes: string;
+  /** Carried in from the Step 2 sheet and lifted onto the strategy settings.
+   *  They belong to Step 4, but the cane team fills one sheet, not two. */
+  yoyChangePct?: number;
+  growerUptakePct?: number;
   isCustom?: boolean; // added via modal
   isEdited?: boolean;
 }

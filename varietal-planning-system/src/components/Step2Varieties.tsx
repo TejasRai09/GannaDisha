@@ -511,9 +511,16 @@ export const Step2Varieties: React.FC<Step2VarietiesProps> = ({
                     <div>
                       <div className="flex justify-between text-[11px] text-(--text-secondary) mb-1">
                         <span>Sugar Juice Density</span>
-                        <span className="font-mono font-semibold">{v.juiceSucrosePct}%</span>
+                        <span className="font-mono font-semibold">
+                          {v.juiceSucrosePct > 0 ? `${v.juiceSucrosePct}%` : 'not set'}
+                        </span>
                       </div>
                       <div className="h-1.5 w-full bg-(--surface-sunken) rounded-full overflow-hidden">
+                        {/* The scale runs 14-22% pol. Below 14 the old expression
+                            went negative, CSS discarded the width, and the bar
+                            filled the track - so an unknown sucrose rendered as a
+                            full one. Clamped at both ends, and an unset value
+                            draws nothing at all. */}
                         <div
                           className={`h-full rounded-full ${
                             v.juiceSucrosePct >= 18.5
@@ -522,7 +529,9 @@ export const Step2Varieties: React.FC<Step2VarietiesProps> = ({
                               ? 'bg-teal-500'
                               : 'bg-amber-500'
                           }`}
-                          style={{ width: `${Math.min(100, ((v.juiceSucrosePct - 14) / 8) * 100)}%` }}
+                          style={{
+                            width: `${Math.max(0, Math.min(100, ((v.juiceSucrosePct - 14) / 8) * 100))}%`,
+                          }}
                         />
                       </div>
                     </div>

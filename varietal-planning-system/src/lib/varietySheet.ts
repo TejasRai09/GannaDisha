@@ -67,6 +67,8 @@ export const COLUMNS: ColSpec[] = [
   { header: 'Animal Damage Risk', width: 18, kind: 'list', measured: false, note: 'LOW, MEDIUM or HIGH. Soft sweet canes get eaten.' },
   { header: 'Farmer Acceptance (1-5)', width: 21, kind: 'int', measured: false, note: '1 = farmers refuse it, 5 = they ask for it. A plan farmers reject is not a plan.' },
   { header: 'Seed Available (qtl)', width: 18, kind: 'int', measured: false, note: 'Quintals of seed of this variety you can actually get hold of for the coming season. 0 is a real answer here.' },
+  { header: 'Change per Year %', width: 18, kind: 'num1', measured: false, note: 'How fast this variety should move each year, as a percentage of its own area. Fill it where the Strategy is EXPAND or REDUCE; it is ignored for HOLD and EXIT. Leave blank to use 25%.' },
+  { header: 'Grower Uptake %', width: 17, kind: 'num1', measured: false, note: 'Of the growers who do not already grow this variety, what share will take it in a year. This is the ceiling on NEW area. A grower trying something new gives it one plot, and that plot out-seeds his whole holding within a year - so what limits a variety is how many growers start, not how much land each spares. Leave blank to derive it from Farmer Acceptance.' },
   { header: 'Notes', width: 42, kind: 'text', measured: false, note: 'Anything else worth knowing.' },
 ];
 
@@ -449,7 +451,12 @@ function refToCol(ref: string): number {
 function readSheet(xml: string, shared: string[]): string[][] {
   const rows: string[][] = [];
   const rowRe = /<row[^>]*r="(\d+)"[^>]*>([\s\S]*?)<\/row>/g;
-  const cellRe = /<c([^>]*)>([\s\S]*?)<\/c>|<c([^>]*)\/>/g;
+  // Self-closing FIRST, and its attributes are lazy. Written the other way
+  // round, `[^>]*` swallows the slash of `<c r="N5"/>`, the open-tag branch
+  // matches, and `([\s\S]*?)</c>` then runs into the NEXT cell - so an empty
+  // cell eats its neighbour's value and files it under its own column. That
+  // is how a blank Juice Sucrose came back holding Cane Yield's 80.
+  const cellRe = /<c([^>]*?)\/>|<c([^>]*)>([\s\S]*?)<\/c>/g;
   let rm: RegExpExecArray | null;
   while ((rm = rowRe.exec(xml))) {
     const rn = Number(rm[1]);
@@ -457,8 +464,8 @@ function readSheet(xml: string, shared: string[]): string[][] {
     let cm: RegExpExecArray | null;
     cellRe.lastIndex = 0;
     while ((cm = cellRe.exec(rm[2]))) {
-      const attrs = cm[1] ?? cm[3] ?? '';
-      const inner = cm[2] ?? '';
+      const attrs = cm[1] ?? cm[2] ?? '';
+      const inner = cm[3] ?? '';
       const refM = /r="([A-Z]+\d+)"/.exec(attrs);
       if (!refM) continue;
       const ci = refToCol(refM[1]);
@@ -606,6 +613,8 @@ export function parseVarietySheet(buffer: ArrayBuffer): SheetParseResult {
     const weight = num(get(cells, 'Avg Cane Weight (g)'));
     const accept = num(get(cells, 'Farmer Acceptance (1-5)'));
     const seed = num(get(cells, 'Seed Available (qtl)'));
+    const yoy = num(get(cells, 'Change per Year %'));
+    const uptake = num(get(cells, 'Grower Uptake %'));
     const notes = (get(cells, 'Notes') || '').trim();
 
     if (sucrose !== undefined) patch.juiceSucrosePct = sucrose;
@@ -615,6 +624,10 @@ export function parseVarietySheet(buffer: ArrayBuffer): SheetParseResult {
     // 0 is meaningful for seed, so it is written whenever the cell is not blank.
     if (seed !== undefined) patch.seedAvailableQtl = seed;
     if (notes) patch.notes = notes;
+    // Strategy dials ride on the variety record so one upload carries both the
+    // agronomy and the pace; App lifts them onto the Step 4 settings.
+    if (yoy !== undefined) patch.yoyChangePct = yoy;
+    if (uptake !== undefined) patch.growerUptakePct = uptake;
 
     if (Object.keys(patch).length === 0) { blankRows++; continue; }
     values.set(norm(name), patch);

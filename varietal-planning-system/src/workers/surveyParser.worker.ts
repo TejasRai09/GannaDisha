@@ -224,7 +224,10 @@ function run(buffer: ArrayBuffer, fileName: string, fileSize: number): ParseResu
   const uploadFailReasons: Record<string, number> = {};
 
   const rowRe = /<row[^>]*>([\s\S]*?)<\/row>/g;
-  const cellRe = /<c r="([A-Z]+\d+)"([^>]*)>([\s\S]*?)<\/c>/g;
+  // Self-closing first - see the note in varietySheet.ts. An empty cell
+  // written as `<c r="AS5"/>` would otherwise consume the next cell and
+  // shift every value after it one column left.
+  const cellRe = /<c r="([A-Z]+\d+)"([^>]*?)\/>|<c r="([A-Z]+\d+)"([^>]*)>([\s\S]*?)<\/c>/g;
 
   // Decode the sheet in windows instead of all at once. A JS string holds two
   // bytes per character, so turning 556 MB of XML into one string would need
@@ -262,9 +265,11 @@ function run(buffer: ArrayBuffer, fileName: string, fileSize: number): ParseResu
     cellRe.lastIndex = 0;
     let c: RegExpExecArray | null;
     while ((c = cellRe.exec(inner))) {
-      const col = colOf(c[1]);
-      const attrs = c[2];
-      const body = c[3];
+      // Groups 1-2 are the self-closing branch, 3-5 the open-tag one.
+      const selfClosing = c[1] !== undefined;
+      const col = colOf(selfClosing ? c[1] : c[3]);
+      const attrs = (selfClosing ? c[2] : c[4]) || '';
+      const body = selfClosing ? '' : (c[5] || '');
       const vm = /<v>([\s\S]*?)<\/v>/.exec(body);
       let val = vm ? vm[1] : '';
       if (attrs.indexOf('t="s"') !== -1) {
