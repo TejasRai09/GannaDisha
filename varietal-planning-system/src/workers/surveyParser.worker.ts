@@ -53,6 +53,11 @@ const HEADER_NAMES = {
 const OPTIONAL_HEADER_NAMES = {
   uploadYn: ['upload_yn'],
   errorDesc: ['amity_errordesc'],
+  // Written by build/make_final_survey.py: MEASURED, VILLAGE-ESTIMATE or
+  // NOT-RECORDED. Where a file carries it, it decides which rows count towards
+  // the land split - which is better than guessing from crop type, because a
+  // ratoon plot given a village estimate does now carry a real answer.
+  landTypeBasis: ['landtype_basis'],
 } as const;
 type OptColKey = keyof typeof OPTIONAL_HEADER_NAMES;
 let OPT = {} as Partial<Record<OptColKey, string>>;
@@ -169,6 +174,8 @@ function run(buffer: ArrayBuffer, fileName: string, fileSize: number): ParseResu
   const cropHa: Record<string, number> = {};
   const landHa: Record<string, number> = {};
   let landRecordedHa = 0, landUnrecordedHa = 0;
+  // Split of what IS recorded, so the flag can name the difference.
+  let measuredHa = 0, estimatedHa = 0;
   // Measured land type per grower and per village, from rows that actually carry
   // it. Used to infer what a ratoon plot sits on, since the ERP records nothing.
   const growerLow: Record<string, number> = {}, growerTot: Record<string, number> = {};
@@ -278,17 +285,32 @@ function run(buffer: ArrayBuffer, fileName: string, fileSize: number): ParseResu
     const variety = (cells[COL.variety] || '').trim();
     const crop = (cells[COL.cropType] || '').trim().toUpperCase();
     const land = (cells[COL.landType] || '').trim().toUpperCase();
+    const basis = OPT.landTypeBasis
+      ? (cells[OPT.landTypeBasis] || '').trim().toUpperCase()
+      : '';
 
     totalRecords++;
     areaTotal += area;
     if (crop) cropHa[crop] = (cropHa[crop] || 0) + area;
+    // Does this row's land type mean anything?
+    //
+    // A file with LANDTYPE_BASIS answers directly. Without it we fall back to
+    // crop type, because the raw ERP export writes UPLAND on every ratoon row
+    // without measuring - counting those drags the command area from 39.5%
+    // lowland down to 23.8%, which is an artefact, not a finding.
+    const basisOk = OPT.landTypeBasis
+      ? basis !== 'NOT-RECORDED'
+      : crop !== 'RATOON';
+
     // Land type is recorded on plant, autumn and ratoon II, but on no RATOON row
     // at all - a field does not become upland when it ratoons, the column is
     // simply not filled. Averaging those in understates lowland badly, so the
     // split is measured only where the value exists.
-    if (land && crop !== 'RATOON') {
+    if (land && basisOk) {
       landHa[land] = (landHa[land] || 0) + area;
       landRecordedHa += area;
+      if (basis === 'VILLAGE-ESTIMATE') estimatedHa += area;
+      else measuredHa += area;
     } else {
       landUnrecordedHa += area;
     }
@@ -325,7 +347,7 @@ function run(buffer: ArrayBuffer, fileName: string, fileSize: number): ParseResu
     }
 
     // Land-type profile of this grower and this village, from measured rows only.
-    if (land && crop !== 'RATOON') {
+    if (land && basisOk) {
       const isLow = land === 'LOWLAND' ? area : 0;
       if (gk !== '||') {
         growerTot[gk] = (growerTot[gk] || 0) + area;
@@ -359,9 +381,10 @@ function run(buffer: ArrayBuffer, fileName: string, fileSize: number): ParseResu
         } else {
           freePlotMap.set(pk, {
             village, society, grower: gk,
-            // RATOON II carries a real land type; plain RATOON carries none, and
+            // An estimated land type is still an answer; only a row with
+            // nothing recorded stays UNKNOWN for the inference step.
             // recording it as UPLAND is what understated lowland by 16 points.
-            landType: crop === 'RATOON' ? 'UNKNOWN' : land === 'LOWLAND' ? 'LOWLAND' : 'UPLAND',
+            landType: !basisOk ? 'UNKNOWN' : land === 'LOWLAND' ? 'LOWLAND' : 'UPLAND',
             areaHa: area,
             currentVariety: variety,
             cropStage: crop as 'PLANT' | 'AUTUMN' | 'RATOON' | 'RATOON II',
@@ -457,6 +480,18 @@ function run(buffer: ArrayBuffer, fileName: string, fileSize: number): ParseResu
         `The split shown is measured on the ${r1(landRecordedHa).toLocaleString()} ha where the value ` +
         `actually exists, giving ${lowPct.toFixed(1)}% lowland. Counting the ratoon land as upland ` +
         `would have shown about 24% instead.`,
+    });
+  } else if (estimatedHa > 0) {
+    // The gap is closed, but not by measurement - say which part is which, or
+    // an estimate quietly becomes a survey figure a season from now.
+    flags.push({
+      severity: 'warning',
+      title: `Land type estimated on ${r1(estimatedHa).toLocaleString()} ha of ratoon`,
+      detail:
+        `Those plots carry a village-level share supplied by the cane team rather than a ` +
+        `surveyed value, and the village total is what it is accurate to - not the individual ` +
+        `field. The remaining ${r1(measuredHa).toLocaleString()} ha is measured plot by plot. ` +
+        `Read together they give ${(((landHa['LOWLAND'] || 0) / Math.max(1, landRecordedHa)) * 100).toFixed(1)}% lowland.`,
     });
   }
 
