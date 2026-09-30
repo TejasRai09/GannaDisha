@@ -663,6 +663,69 @@ export const Step4Strategy: React.FC<Step4StrategyProps> = ({
                       </select>
                     </div>
 
+                    {/* The pace, sitting with the dropdown that decides whether
+                        it applies. The inline copy higher up shows only on
+                        EXPAND and REDUCE rows, which is right - but it means
+                        someone looking at a HOLD variety sees no dial anywhere
+                        and concludes the feature is missing. Here it is always
+                        present, and says plainly when it does nothing. */}
+                    <div className="p-3 bg-(--surface-sunken) rounded-lg border border-(--border)/70">
+                      <span className="font-bold text-(--text-primary) block mb-2 text-[12px]">
+                        Pace of Change:
+                      </span>
+                      {isExpand || isReduce ? (
+                        <div className="space-y-2">
+                          <label className="flex items-center justify-between gap-3">
+                            <span className="text-[12px] text-(--text-secondary)">
+                              {isExpand ? 'Grow' : 'Cut'} per year
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                min={0}
+                                max={100}
+                                step={5}
+                                value={strat.yoyChangePct ?? 25}
+                                onChange={(e) =>
+                                  updateVarietyStrategy(v.id, {
+                                    yoyChangePct: Math.max(0, Math.min(100, Number(e.target.value) || 0)),
+                                  })
+                                }
+                                className="w-[64px] px-2 py-1 text-[12px] tabular-nums rounded-md border border-(--border) bg-(--surface-card) text-(--text-primary)"
+                              />
+                              <span className="text-[11px] text-(--text-muted)">%</span>
+                            </span>
+                          </label>
+                          {isExpand && (
+                            <label className="flex items-center justify-between gap-3">
+                              <span className="text-[12px] text-(--text-secondary)">Grower uptake</span>
+                              <span className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  step={1}
+                                  value={strat.growerUptakePct ?? 0}
+                                  onChange={(e) =>
+                                    updateVarietyStrategy(v.id, {
+                                      growerUptakePct: Math.max(0, Math.min(100, Number(e.target.value) || 0)),
+                                    })
+                                  }
+                                  className="w-[64px] px-2 py-1 text-[12px] tabular-nums rounded-md border border-(--border) bg-(--surface-card) text-(--text-primary)"
+                                />
+                                <span className="text-[11px] text-(--text-muted)">%</span>
+                              </span>
+                            </label>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-[12px] text-(--text-muted) leading-relaxed">
+                          A rate applies only where the variety is being expanded or reduced.
+                          Set the directive above to EXPAND or REDUCE and it appears here.
+                        </p>
+                      )}
+                    </div>
+
                     <div className="p-3 bg-(--surface-sunken) rounded-lg border border-(--border)/70 text-[12px] text-(--text-secondary)">
                       <span className="font-bold text-(--text-primary) block mb-1">
                         Field Agronomist Notes:
