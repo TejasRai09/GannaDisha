@@ -470,28 +470,36 @@ function run(buffer: ArrayBuffer, fileName: string, fileSize: number): ParseResu
     });
   }
 
-  if (landUnrecordedHa > 0) {
-    const lowPct = landRecordedHa > 0 ? ((landHa['LOWLAND'] || 0) / landRecordedHa) * 100 : 0;
-    flags.push({
-      severity: 'warning',
-      title: `Land type not recorded on ${r1(landUnrecordedHa).toLocaleString()} ha of ratoon`,
-      detail:
-        `The ERP leaves LANDTYPE blank on every RATOON row, so those plots default to UPLAND. ` +
-        `The split shown is measured on the ${r1(landRecordedHa).toLocaleString()} ha where the value ` +
-        `actually exists, giving ${lowPct.toFixed(1)}% lowland. Counting the ratoon land as upland ` +
-        `would have shown about 24% instead.`,
-    });
-  } else if (estimatedHa > 0) {
-    // The gap is closed, but not by measurement - say which part is which, or
-    // an estimate quietly becomes a survey figure a season from now.
+  // Two separate facts, and they can both be true at once. Writing them as
+  // if/else meant a 0.8 ha remainder suppressed a 22,468 ha notice entirely.
+  const lowPct = landRecordedHa > 0 ? ((landHa['LOWLAND'] || 0) / landRecordedHa) * 100 : 0;
+
+  if (estimatedHa > 0) {
     flags.push({
       severity: 'warning',
       title: `Land type estimated on ${r1(estimatedHa).toLocaleString()} ha of ratoon`,
       detail:
-        `Those plots carry a village-level share supplied by the cane team rather than a ` +
-        `surveyed value, and the village total is what it is accurate to - not the individual ` +
-        `field. The remaining ${r1(measuredHa).toLocaleString()} ha is measured plot by plot. ` +
-        `Read together they give ${(((landHa['LOWLAND'] || 0) / Math.max(1, landRecordedHa)) * 100).toFixed(1)}% lowland.`,
+        `The ERP records no land type on a RATOON row, so those plots carry a village-level ` +
+        `share from the cane team instead. It is accurate to the village total, not to the ` +
+        `individual field. The other ${r1(measuredHa).toLocaleString()} ha is measured plot by ` +
+        `plot. Together they give ${lowPct.toFixed(1)}% lowland; counting the ratoon land as ` +
+        `upland, as the raw export does, would have shown about 24%.`,
+    });
+  }
+
+  // Only worth raising when it is enough land to change a decision. Below that
+  // it is a rounding remainder dressed up as a finding.
+  if (landUnrecordedHa >= 50) {
+    flags.push({
+      severity: 'warning',
+      title: `Land type not recorded on ${r1(landUnrecordedHa).toLocaleString()} ha of ratoon`,
+      detail: estimatedHa > 0
+        ? `These plots fall outside the villages the cane team's sheet covers, so they have ` +
+          `neither a measured nor an estimated land type and are left out of the split.`
+        : `The ERP leaves LANDTYPE blank on every RATOON row, so those plots default to ` +
+          `UPLAND. The split shown is measured on the ${r1(landRecordedHa).toLocaleString()} ha ` +
+          `where the value actually exists, giving ${lowPct.toFixed(1)}% lowland. Counting the ` +
+          `ratoon land as upland would have shown about 24% instead.`,
     });
   }
 
