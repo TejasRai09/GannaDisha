@@ -22,7 +22,6 @@ import type {
   VarietyStage,
   VarietyStrategy,
   AnimalDamageRisk,
-  CropDuration,
   RedRotReaction,
 } from '../types';
 
@@ -33,7 +32,6 @@ export const SHEET_LISTS = {
   Strategy: ['INTRODUCE-NEW', 'EXPAND', 'HOLD', 'REDUCE', 'EXIT'],
   'Land Suitability': ['UPLAND', 'LOWLAND', 'BOTH'],
   'Planting Season': ['SPRING', 'AUTUMN', 'BOTH'],
-  'Crop Duration': ['12-MONTH', '18-MONTH'],
   'Red Rot Resistance': ['R', 'MR', 'S'],
   'Animal Damage Risk': ['LOW', 'MEDIUM', 'HIGH'],
 } as const;
@@ -54,7 +52,7 @@ export const COLUMNS: ColSpec[] = [
   { header: 'Area (ha)', width: 12, kind: 'num1', measured: true, note: 'What the survey found on the ground.' },
   { header: '% of Area', width: 10, kind: 'num1', measured: true, note: 'Share of the total command area.' },
   { header: 'Cumulative %', width: 13, kind: 'num1', measured: true, note: 'Running total down the sheet.' },
-  { header: 'Lowland % (measured)', width: 19, kind: 'num1', measured: true, note: 'How much of this variety the survey actually found on lowland. Use it to sanity-check the Land Suitability you enter.' },
+  { header: 'Lowland % (plant cane)', width: 22, kind: 'num1', measured: true, note: 'Measured on plant, autumn and ratoon II plots only - the ERP writes UPLAND on every ratoon row without measuring it, so ratoon is excluded. Read across the whole file lowland looks like 23.8%; measured where it exists it is 39.5%. Recomputed once ratoon land type arrives.' },
   { header: 'Survey Records', width: 14, kind: 'int', measured: true, note: 'Rows behind the figure. A handful of records means the area is not reliable.' },
   { header: 'Priority', width: 12, kind: 'text', measured: true, note: 'FILL FIRST covers 95% of your area. The rest is optional.' },
 
@@ -62,7 +60,6 @@ export const COLUMNS: ColSpec[] = [
   { header: 'Strategy', width: 16, kind: 'list', measured: false, note: 'What you WANT it to do next: EXPAND, HOLD, REDUCE, EXIT, or INTRODUCE-NEW.' },
   { header: 'Land Suitability', width: 17, kind: 'list', measured: false, note: 'Which land it belongs on. BOTH if it grows anywhere. Compare against the measured lowland % on the left.' },
   { header: 'Planting Season', width: 16, kind: 'list', measured: false, note: 'SPRING (Feb-Mar), AUTUMN (Oct-Nov), or BOTH.' },
-  { header: 'Crop Duration', width: 14, kind: 'list', measured: false, note: '12-MONTH or 18-MONTH. An 18-month autumn crop holds the field through two seasons - this changes the whole plan.' },
   { header: 'Juice Sucrose %', width: 15, kind: 'num1', measured: false, note: 'Pol in cane, roughly 14 to 20. Leave blank if not known - do NOT put 0.' },
   { header: 'Cane Yield (t/ha)', width: 16, kind: 'num1', measured: false, note: 'Tonnes per hectare, roughly 50 to 110. This is what decides how much sugar the plan is worth.' },
   { header: 'Avg Cane Weight (g)', width: 18, kind: 'int', measured: false, note: 'Single cane weight in grams, roughly 400 to 1200. This is what the farmer notices.' },
@@ -595,7 +592,6 @@ export function parseVarietySheet(buffer: ArrayBuffer): SheetParseResult {
     const land = pick<LandSuitability>(get(cells, 'Land Suitability'), SHEET_LISTS['Land Suitability']);
     const season = pick<PlantingSeason>(get(cells, 'Planting Season'), SHEET_LISTS['Planting Season']);
     const animal = pick<AnimalDamageRisk>(get(cells, 'Animal Damage Risk'), SHEET_LISTS['Animal Damage Risk']);
-    const duration = pick<CropDuration>(get(cells, 'Crop Duration'), SHEET_LISTS['Crop Duration']);
     const redRot = pick<RedRotReaction>(get(cells, 'Red Rot Resistance'), SHEET_LISTS['Red Rot Resistance']);
 
     if (stage) patch.stage = stage;
@@ -603,7 +599,6 @@ export function parseVarietySheet(buffer: ArrayBuffer): SheetParseResult {
     if (land) patch.landSuitability = land;
     if (season) patch.plantingSeason = season;
     if (animal) patch.animalDamageRisk = animal;
-    if (duration) patch.cropDuration = duration;
     if (redRot) patch.redRot = redRot;
 
     const sucrose = num(get(cells, 'Juice Sucrose %'));

@@ -354,6 +354,8 @@ export const Step4Strategy: React.FC<Step4StrategyProps> = ({
           const sparklineData = getSparklineData(v.id);
           const isExpanded = expandedCardId === v.id;
           const isExit = strat.strategy === 'EXIT';
+          const isExpand = strat.strategy === 'EXPAND' || strat.strategy === 'INTRODUCE-NEW';
+          const isReduce = strat.strategy === 'REDUCE';
 
           const y3Hectares = sparklineData[sparklineData.length - 1]?.ha || 0;
           const growthPct =
@@ -482,6 +484,67 @@ export const Step4Strategy: React.FC<Step4StrategyProps> = ({
                     )}
                   </div>
                 </div>
+                )}
+
+                {/* Pace and uptake.
+                    Both of these were constants inside the engine until the
+                    cane team asked for them (29 Sep 2026). The rate is how
+                    fast the variety moves each year; the uptake is the share
+                    of growers who will take it where they do not already grow
+                    it, which is what actually limits a new variety here - the
+                    median grower farms 0.43 ha over two plots, so his trial is
+                    one plot, and that plot out-seeds his whole holding within
+                    a year. */}
+                {mode === 'seed-driven' && (isExpand || isReduce) && (
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <label className="flex items-center gap-2">
+                      <span className="text-[11px] font-medium text-(--text-muted) flex items-center">
+                        {isExpand ? 'Grow' : 'Cut'} per year
+                        <Tooltip content="How much this variety moves each year, as a percentage of its own area." />
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          step={5}
+                          value={strat.yoyChangePct ?? 25}
+                          onChange={(e) =>
+                            updateVarietyStrategy(v.id, {
+                              yoyChangePct: Math.max(0, Math.min(100, Number(e.target.value) || 0)),
+                            })
+                          }
+                          className="w-[58px] px-2 py-1 text-[12px] tabular-nums rounded-md border border-(--border) bg-(--surface-card) text-(--text-primary)"
+                        />
+                        <span className="text-[11px] text-(--text-muted)">%</span>
+                      </div>
+                    </label>
+
+                    {isExpand && (
+                      <label className="flex items-center gap-2">
+                        <span className="text-[11px] font-medium text-(--text-muted) flex items-center">
+                          Grower uptake
+                          <Tooltip content="Share of growers who take this variety where they do not already grow it. A grower trying something new gives it one plot; what limits the spread is how many growers start, not how much land each spares." />
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            step={1}
+                            value={strat.growerUptakePct ?? 0}
+                            onChange={(e) =>
+                              updateVarietyStrategy(v.id, {
+                                growerUptakePct: Math.max(0, Math.min(100, Number(e.target.value) || 0)),
+                              })
+                            }
+                            className="w-[58px] px-2 py-1 text-[12px] tabular-nums rounded-md border border-(--border) bg-(--surface-card) text-(--text-primary)"
+                          />
+                          <span className="text-[11px] text-(--text-muted)">%</span>
+                        </div>
+                      </label>
+                    )}
+                  </div>
                 )}
 
                 {/* Mini 3-Year Projection Sparkline */}

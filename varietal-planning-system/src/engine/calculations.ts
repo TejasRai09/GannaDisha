@@ -131,6 +131,8 @@ export function calculateYearlyProjections(
 ): YearProjectionItem[] {
   const seedRate = getEffectiveSeedRate(params);
   const totalCommandArea = params.commandAreaHa;
+  // New ground can only come from what is out of ratoon this year.
+  const freeLandHa = getFreeReplantableHa(params, totalCommandArea);
   const freshPlantRatio = getFreshPlantRatio(params);
 
   // Base Year breakdown
@@ -199,56 +201,73 @@ export function calculateYearlyProjections(
         const asked = strat.targetsHa?.[yIdx];
         targetArea = typeof asked === 'number' && Number.isFinite(asked) ? asked : prevArea;
       } else {
-        // Mode B: Seed-driven algorithm
+        // Mode B: seed-driven.
+        //
+        // The pace of every branch below used to be a constant sitting right
+        // here - 0.75 a year for REDUCE, 0.98 for HOLD, 0.45 then 0.15 for
+        // EXIT. None of them appeared on a screen or in a sheet, so when the
+        // plan said a variety fell to a particular figure, that was this file
+        // talking rather than anyone at the mill. The cane team asked for the
+        // rate to be theirs (29 Sep 2026); `yoyChangePct` is it, and these
+        // constants are now only the fallback when a variety has no setting.
+        const yoy = Math.max(0, strat.yoyChangePct ?? 25) / 100;
+
         switch (strat.strategy) {
           case 'EXIT': {
-            // Rapid phase-out: locked ratoon in Y1, then minimal in Y2, 0 in Y3
+            // Year 1 still carries locked ratoon that cannot be ploughed early.
             if (yearNum === 1) targetArea = Math.round(prevArea * 0.45);
             else if (yearNum === 2) targetArea = Math.round(prevArea * 0.15);
             else targetArea = 0;
             break;
           }
           case 'REDUCE': {
-            // Gradual reduction by ~25% each year
-            targetArea = Math.max(0, Math.round(prevArea * 0.75));
+            targetArea = Math.max(0, Math.round(prevArea * (1 - yoy)));
             break;
           }
           case 'HOLD': {
-            // Steady state
-            targetArea = Math.round(prevArea * 0.98);
+            // Hold means hold. It used to drift down 2% a year for no stated
+            // reason, which quietly shrank the plan by 6% over three years.
+            targetArea = Math.round(prevArea);
             break;
           }
           case 'INTRODUCE-NEW': {
-            // Started from test plot / purchased seed
             if (prevArea === 0) {
-              const initialHa = Math.min(params.seedPurchaseCeilingHa, params.testPlotSizeHa);
-              targetArea = initialHa;
-            } else {
-              const retentionRate = (strat.retentionPct || 50) / 100;
-              const expansionHa = Math.round(prevArea * multFactor * retentionRate);
-              targetArea = Math.min(expansionHa, prevArea * 5);
+              targetArea = Math.min(params.seedPurchaseCeilingHa, params.testPlotSizeHa);
+              break;
             }
+            targetArea = Math.round(prevArea * (1 + yoy));
             break;
           }
           case 'EXPAND':
           default: {
-            const retentionRate = (strat.retentionPct || 50) / 100;
+            // What a variety can reach is the lesser of three things.
+            //
+            //  1. the rate the cane team set for it
+            //  2. the seed that exists - farmers already growing it multiply
+            //     their own, so only NEW ground draws on mill stock
+            //  3. how many growers will take it at all
+            //
+            // Three is the one that usually binds, and it is the reason this
+            // is not simply a growth rate. At Gobind the median grower farms
+            // 0.43 ha over two plots: a grower trying a variety gives it one
+            // plot, and that plot yields enough seed to plant several times
+            // his whole holding next year. So a variety is not held back by
+            // how much land each adopter spares - it is held back by how many
+            // adopters there are in the first place.
+            const wanted = Math.round(prevArea * (1 + yoy));
 
-            // Who supplies the seed decides what limits the growth.
-            //
-            // Once farmers hold a variety they multiply it themselves, from their
-            // own standing crop - for replanting AND for taking new ground. So the
-            // mill's nursery stock does not cap them; their own multiplication
-            // rate and retention choice does, which is what expansionRatio models.
-            //
-            // A variety farmers do not have yet is different. Every hectare of it
-            // has to come from mill seed, so there the stock is a hard ceiling.
-            targetArea = getMaxReachableHa(
+            const reachable = getMaxReachableHa(
               prevArea,
               params,
               strat.retentionPct || 50,
               availableSeed
             );
+
+            const uptake = Math.max(0, strat.growerUptakePct ?? 0) / 100;
+            const newGroundCeiling =
+              uptake > 0 ? prevArea + freeLandHa * uptake : Number.POSITIVE_INFINITY;
+
+            targetArea = Math.min(wanted, reachable, newGroundCeiling);
             break;
           }
         }
@@ -695,11 +714,19 @@ export function calculateSummaryMetrics(
     if (sharePct > params.maxVarietyConcentrationPct) varietiesOverCapCount++;
   });
 
-  // Seed comes straight from the per-variety balances rather than being worked
-  // out again here. This used to carry its own copy of the fresh-plant constant
-  // and charge every variety for all of its replanting, so the strip could show
-  // 1.8 million qtl while the cards above it showed almost none.
-  const totalSeedRequiredQtl = seedBalances.reduce((sum, b) => sum + b.seedRequiredQtl, 0);
+  // Seed for Year 1, read off the projection rather than recomputed.
+  //
+  // This summed seedBalances.seedRequiredQtl, which counts only the seed the
+  // MILL must supply - and the engine holds that a variety farmers already
+  // grow supplies its own. Every variety in the survey is already in the
+  // ground, so the sum was always zero and the strip read "0 qtl" under a plan
+  // replanting some thirty thousand hectares, while Step 5 read 2.15 million
+  // for the same plan. Same fix as the Step 5 card; this was the copy of it
+  // that got missed.
+  const seedYear = projections[1] || projections[0];
+  const totalSeedRequiredQtl = Math.round(
+    (('caneDivertedToSeedTonnes' in (seedYear || {}) ? seedYear.caneDivertedToSeedTonnes : 0) || 0) * 10
+  );
 
   // Feasibility used to test the concentration cap alone, so the strip reported
   // "FEASIBLE: OK" with seed deficits sitting on the cards directly above it.

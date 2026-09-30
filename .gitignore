@@ -71,3 +71,8 @@ npm-debug.log*
 # committed; the originals are large and are not needed to build.
 bg-src.jpg
 zuari-src.png
+
+# Frames pulled from the demo recording. They show grower villages and a
+# signed-in address, so they stay off a public repo.
+video/
+*.mp4

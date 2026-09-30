@@ -164,6 +164,20 @@ function allocateOneYear(
     carryOverHa[v.id] = Math.max(0, v.currentAreaHa - (freeByVariety[v.id] || 0));
   });
 
+  // Every variety each grower already has standing, across all his plots.
+  // He can cut his own seed from any of these, so they cost the mill nothing
+  // to plant and cost the grower no persuading.
+  const growerVarieties = new Map<string, Set<string>>();
+  freePlots.forEach((p) => {
+    if (!p.grower) return;
+    let set = growerVarieties.get(p.grower);
+    if (!set) {
+      set = new Set<string>();
+      growerVarieties.set(p.grower, set);
+    }
+    set.add(norm(p.currentVariety));
+  });
+
   const needs = buildNeeds(varieties, projections, carryOverHa, year);
   const needById = new Map(needs.map((n) => [n.variety.id, n]));
 
@@ -233,16 +247,31 @@ function allocateOneYear(
       const pool = candidates; // already a fresh array from the filter above
       const take = wantSplit ? Math.min(maxBlocks, 2, pool.length) : 1;
 
+      // What this grower already grows, anywhere. He can cut seed from his own
+      // standing crop for any of these; anything else he has to be supplied
+      // with. The cane team asked for that to count (29 Sep 2026), and it is
+      // also simply cheaper - a variety a grower already has spreads on his
+      // own field at no cost to the mill's nursery.
+      const ownSeed = growerVarieties.get(plot.grower);
+
       for (let i = 0; i < take; i++) {
         // Prefer a maturity this grower has not been given yet, so his harvest
         // staggers. Among equals, whichever variety needs the area most.
         const fresh = pool.filter((n) => !givenMaturity.has(n.maturity));
         const from = fresh.length && i === 0 ? fresh : pool;
-        const pick = from.reduce((best, n) => {
+
+        // A variety the grower can seed himself wins over one he cannot, but
+        // only among varieties the plan wants anyway. This is a preference and
+        // not a veto: if it were a veto the mix could never change, which is
+        // the whole point of the plan.
+        const own = ownSeed ? from.filter((n) => ownSeed.has(norm(n.variety.name))) : [];
+        const ranked = own.length ? own : from;
+
+        const pick = ranked.reduce((best, n) => {
           const bh = villageHeadroom(plot.village, best.variety.id, best.remainingHa);
           const nh = villageHeadroom(plot.village, n.variety.id, n.remainingHa);
           return nh > bh ? n : best;
-        }, from[0]);
+        }, ranked[0]);
         if (!pick) break;
         if (villageHeadroom(plot.village, pick.variety.id, plot.areaHa) <= 0) {
           pool.splice(pool.indexOf(pick), 1);

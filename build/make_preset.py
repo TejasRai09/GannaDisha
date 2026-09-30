@@ -3,34 +3,24 @@
 
     python build/make_preset.py     ->  plan_inputs/preset.json
 
-Why this exists
----------------
-Signing in and finding six empty screens tells a manager nothing. This fills
-Steps 2, 3 and 4 so the app opens on a complete, working three-year plan and
-the trajectory and the plot-level dispatch have something to compute from.
+Two sources, and the rule between them is simple: the survey says what is in
+the ground, the cane team says what each variety is like.
 
-Measured against assumed
-------------------------
-Most of what Step 2 asks for is already in the survey, and is taken from it:
+    from the survey        area, share, maturity, measured lowland %, records
+    from the filled sheet  strategy, stage, land suitability, planting season,
+                           cane yield, cane weight, red rot, animal damage,
+                           farmer acceptance, seed available
 
-    maturity            CROPCATEGORY, as recorded
-    landSuitability     inferred from where the variety is actually grown
-    plantingSeason      inferred from its autumn share
-    cropDuration        18-month where the variety is planted in autumn
-    farmerAcceptance    from how many growers have taken it up
-    currentAreaHa       measured
-    seedAvailableQtl    computed from standing area (see SEED_PLOT_SHARE)
-    stage, strategy     follow from the above under stated rules
+VARIETY_SHEET is the template the cane team returns (Fawzia, 29 Sep 2026).
+Where a row is present there, its judged values win outright - nothing is
+inferred over the top of a figure somebody actually supplied. Where the sheet
+has no row, or leaves a cell blank, the fallbacks below fill in so the engine
+still has something to run on.
 
-Four fields are not in the survey and cannot be derived from it:
-
-    juiceSucrosePct  avgCaneWeightGrams  caneYieldTha  redRot
-
-Those are the cane R&D inputs the mill has yet to supply. They are written
-here as class-level placeholders so the engine has something to run on, and
-they are listed in `provisionalFields` so the app can say plainly on screen
-that they are not mill figures. Do not quote a recovery number that comes out
-of this file as the mill's own until those four are filled in for real.
+Juice sucrose is the one field the sheet does not yet carry. It stays a
+class-level placeholder and stays named in `provisionalFields`, so Steps 2 and
+5 keep saying on screen that the recovery figure is an illustration. Remove it
+from that list the day the PoL values arrive - and not before.
 """
 
 import datetime
@@ -47,25 +37,36 @@ CACHE = os.path.join(HERE, "cache", "plots_2627.parquet")
 OUT_DIR = os.path.join(ROOT, "plan_inputs")
 OUT = os.path.join(OUT_DIR, "preset.json")
 
-# Share of a variety's standing area the mill would run as seed nursery. Two
-# per cent is a working figure, not a mill policy - it is what makes seed a
-# real constraint on expansion rather than a formality. The plant team head
-# owns this number.
-SEED_PLOT_SHARE = 0.02
+# The cane team's returned template. Its judged columns override everything
+# inferred here.
+VARIETY_SHEET = os.path.join(ROOT, "Variety_Input_TEMPLATE_2026-09-29.xlsx")
 
-# Placeholders by maturity class, pending the cane R&D inputs.
+# Only used where the sheet is silent.
+SEED_PLOT_SHARE = 0.02
 BY_CLASS = {
     "EARLY":    {"sucrose": 17.5, "yield": 72.0, "caneWeight": 900},
     "GENERAL":  {"sucrose": 16.8, "yield": 68.0, "caneWeight": 950},
     "REJECTED": {"sucrose": 15.5, "yield": 55.0, "caneWeight": 800},
 }
-PROVISIONAL = ["juiceSucrosePct", "avgCaneWeightGrams", "caneYieldTha", "redRot"]
 
-# Red rot has driven UP varietal policy for several seasons and Co 0238 is the
-# variety it was driven by. Naming it is the one agronomic call made here; it
-# is why 0238 comes up REDUCE rather than HOLD, and the cane team should
-# confirm or overturn it along with the rest.
-RED_ROT_SUSCEPTIBLE = {"CO0238"}
+# Sucrose alone. Cane yield, cane weight and red rot came back filled on
+# 29 Sep 2026, so they are no longer provisional and the on-screen notice no
+# longer names them.
+PROVISIONAL = ["juiceSucrosePct"]
+
+# Year-on-year rates, per Fawzia's request that expansion and reduction stop
+# being constants buried in the engine. These are the defaults the sheet does
+# not yet carry a column for; Step 4 exposes them per variety.
+DEFAULT_EXPAND_YOY = 25.0
+DEFAULT_REDUCE_YOY = 25.0
+
+# Model B: a grower asked to take a variety he does not already run gives it
+# one plot, not a share of his holding - the median grower at Gobind farms
+# 0.43 ha across two plots, so a percentage of land cannot be expressed. What
+# limits a variety's spread is how many growers start, which is what this is.
+# Driven off farmer acceptance (1-5) because the cane team has already scored
+# every variety on it.
+UPTAKE_BY_ACCEPTANCE = {1: 2.0, 2: 4.0, 3: 7.0, 4: 11.0, 5: 16.0}
 
 
 def norm(name: str) -> str:
@@ -91,7 +92,63 @@ def load() -> pd.DataFrame:
     return pd.read_parquet(CACHE)
 
 
-def build_varieties(df: pd.DataFrame) -> list:
+def read_sheet() -> dict:
+    """The cane team's filled template, keyed by normalised variety name.
+
+    Returns {} if the sheet is not there, so the generator still runs on a
+    machine that has only the survey.
+    """
+    if not os.path.exists(VARIETY_SHEET):
+        print(f"  (no variety sheet at {os.path.basename(VARIETY_SHEET)} - inferring instead)")
+        return {}
+
+    import openpyxl
+    wb = openpyxl.load_workbook(VARIETY_SHEET, data_only=True)
+    ws = wb[wb.sheetnames[0]]
+    rows = list(ws.iter_rows(values_only=True))
+    # The header is not on row 1 - the sheet carries a title block above it.
+    hdr = next(i for i, r in enumerate(rows)
+               if r and any(str(c).strip() == "Variety" for c in r if c))
+    cols = {str(c).strip(): i for i, c in enumerate(rows[hdr]) if c}
+    wb.close()
+
+    def cell(row, name):
+        i = cols.get(name)
+        if i is None or i >= len(row):
+            return None
+        v = row[i]
+        return None if v is None or str(v).strip() == "" else v
+
+    def num(row, name):
+        v = cell(row, name)
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return None
+
+    out = {}
+    for row in rows[hdr + 1:]:
+        if not row or not cell(row, "Variety"):
+            continue
+        out[norm(cell(row, "Variety"))] = {
+            "strategy":          cell(row, "Strategy"),
+            "stage":             cell(row, "Stage"),
+            "landSuitability":   cell(row, "Land Suitability"),
+            "plantingSeason":    cell(row, "Planting Season"),
+            "caneYieldTha":      num(row, "Cane Yield (t/ha)"),
+            "avgCaneWeightGrams": num(row, "Avg Cane Weight (g)"),
+            "redRot":            cell(row, "Red Rot Resistance"),
+            "animalDamageRisk":  cell(row, "Animal Damage Risk"),
+            "farmerAcceptance":  num(row, "Farmer Acceptance (1-5)"),
+            "seedAvailableQtl":  num(row, "Seed Available (qtl)"),
+            "juiceSucrosePct":   num(row, "Juice Sucrose %"),
+            "notes":             cell(row, "Notes"),
+        }
+    print(f"  variety sheet: {len(out)} rows read from {os.path.basename(VARIETY_SHEET)}")
+    return out
+
+
+def build_varieties(df: pd.DataFrame, judged: dict) -> list:
     total_ha = float(df.area_ha.sum())
 
     df = df.assign(
@@ -136,11 +193,6 @@ def build_varieties(df: pd.DataFrame) -> list:
         else:
             land = "BOTH"
 
-        # An autumn crop holds the field about 18 months, which is why this
-        # matters beyond bookkeeping - it changes when the plot comes free.
-        autumn_pct = float(r.autumnShare) * 100
-        season = "BOTH" if autumn_pct >= 12 else "SPRING"
-        duration = "18-MONTH" if autumn_pct >= 12 else "12-MONTH"
 
         # Adoption as a stand-in for acceptance: a variety many growers have
         # taken up is one they are willing to grow. Compressed, or the whole
@@ -148,81 +200,106 @@ def build_varieties(df: pd.DataFrame) -> list:
         accept = 1 + 4 * (float(r.growers) / max_growers) ** 0.4
         accept = int(min(5, max(1, round(accept))))
 
-        red_rot = "S" if (norm(name) in RED_ROT_SUSCEPTIBLE or maturity == "REJECTED") else "MR"
+        # Fallback only - the sheet's answer wins below. Crop duration used to
+        # be derived here too; Fawzia confirmed 12 months for every variety at
+        # Gobind, so the field is gone rather than guessed.
+        autumn_pct = float(r.autumnShare) * 100
+        season = "BOTH" if autumn_pct >= 12 else "SPRING"
 
-        # Seed comes off standing cane, so what a variety can plant next year
-        # is set by what it occupies this year.
-        seed_qtl = round(float(r.areaHa) * SEED_PLOT_SHARE * cls["yield"] * 10)
+        sheet = judged.get(norm(name), {})
+
+        def pick(field, fallback):
+            """The sheet wins wherever it has an answer."""
+            v = sheet.get(field)
+            return fallback if v in (None, "", "None") else v
+
+        # Judged by the cane team; inferred only where they left a blank.
+        land = pick("landSuitability", land)
+        season = pick("plantingSeason", season)
+        red_rot = pick("redRot", "MR" if maturity != "REJECTED" else "S")
+        animal = pick("animalDamageRisk", "LOW")
+        accept = int(pick("farmerAcceptance", accept))
+        yield_tha = float(pick("caneYieldTha", cls["yield"]))
+        cane_wt = int(float(pick("avgCaneWeightGrams", cls["caneWeight"])))
+        sucrose = float(pick("juiceSucrosePct", cls["sucrose"]))
+
+        # Seed the mill can actually lay hands on. Falls back to a share of
+        # standing cane only where the sheet is silent.
+        seed_qtl = pick("seedAvailableQtl", None)
+        seed_qtl = (round(float(r.areaHa) * SEED_PLOT_SHARE * yield_tha * 10)
+                    if seed_qtl is None else int(float(seed_qtl)))
 
         # "OTH EARLY", "OTH GENERAL", "OTH REJECTED" are the survey's catch-all
-        # buckets, not varieties. They can be held or retired, but nothing can
-        # be expanded that has no name - there is no seed plot for a mixture.
+        # buckets, not varieties. Nothing without a name can be multiplied -
+        # there is no seed plot for a mixture.
         is_bucket = name.upper().startswith("OTH ")
 
-        if maturity == "REJECTED":
+        if sheet.get("strategy"):
+            strategy = str(sheet["strategy"]).strip().upper()
+            stage = str(pick("stage", "REVIEW")).strip().upper()
+            why = "Set by the cane team, 29 Sep 2026."
+            if is_bucket and strategy == "EXPAND":
+                # A survey bucket cannot be expanded whatever the sheet says.
+                strategy = "HOLD"
+                why = "Survey catch-all, not a single variety - cannot be multiplied."
+        elif maturity == "REJECTED":
             stage, strategy = "RETIRED", "EXIT"
             why = "Rejected class in the survey - not to be replanted."
         elif share_pct >= 1:
             stage = "COMMERCIAL"
-            if red_rot == "S":
-                strategy = "REDUCE"
-                why = "Red rot susceptible - step down rather than hold."
-            elif share_pct >= 30:
-                # 30% is not the mill's 40% cap, it is the point at which a
-                # plan should already be steering away from it.
-                strategy = "REDUCE"
-                why = (
-                    f"{share_pct:.0f}% of the command area on one variety, against a "
-                    f"40% cap - diversify before it reaches the ceiling."
-                )
-            elif is_bucket:
-                strategy = "HOLD"
-                why = "Survey catch-all, not a single variety - cannot be multiplied."
-            elif maturity == "EARLY" and share_pct <= 15:
-                strategy = "EXPAND"
-                why = "Established early variety with room to grow - takes area off the leaders."
-            else:
-                strategy = "HOLD"
-                why = "Commercial and stable at its current share."
+            strategy = "HOLD"
+            why = "Commercial and stable at its current share."
         else:
-            stage = "REVIEW"
-            if red_rot == "S":
-                strategy, why = "REDUCE", "Red rot susceptible."
-            else:
-                strategy = "HOLD"
-                why = "Under 1% of area - too small to judge on area alone; hold and watch."
+            stage, strategy = "REVIEW", "HOLD"
+            why = "Under 1% of area - hold and watch."
 
         out.append({
             "id": slug(name),
             "name": name,
-            "currentAreaHa": round(float(r.areaHa), 1),
 
-            # measured
+            # measured from the survey
+            "currentAreaHa": round(float(r.areaHa), 1),
             "measuredLowlandPct": round(low_pct, 1),
             "surveyRecords": int(r.records),
+            "growers": int(r.growers),
             "maturity": maturity,
+
+            # judged by the cane team
             "landSuitability": land,
             "plantingSeason": season,
-            "cropDuration": duration,
+            "caneYieldTha": yield_tha,
+            "avgCaneWeightGrams": cane_wt,
+            "redRot": red_rot,
+            "animalDamageRisk": animal,
             "farmerAcceptance": accept,
             "seedAvailableQtl": seed_qtl,
-            "animalDamageRisk": "LOW",
 
-            # provisional - see PROVISIONAL
-            "juiceSucrosePct": cls["sucrose"],
-            "avgCaneWeightGrams": cls["caneWeight"],
-            "caneYieldTha": cls["yield"],
-            "redRot": red_rot,
+            # still provisional
+            "juiceSucrosePct": sucrose,
 
             "stage": stage,
             "strategy": strategy,
-            "notes": why,
+            "notes": str(pick("notes", why)),
         })
 
     return out
 
 
 def build_strategies(varieties: list) -> dict:
+    """Step 4's settings, including the two rates Fawzia asked to expose.
+
+    `yoyChangePct` is how fast a variety moves each year when it is expanding
+    or reducing. Until now that rate lived as a constant inside the engine and
+    appeared on no screen, which meant the plan's pace was nobody's decision.
+
+    `growerUptakePct` is the share of growers who take a variety they do not
+    already run, in its first year. It is the ceiling on new area, and it is
+    the number that actually governs spread: at Gobind the median grower farms
+    0.43 ha across two plots, so a trial is one plot rather than a slice of a
+    holding, and a single trial plot yields enough seed to plant several times
+    that grower's whole land the following year. What limits a variety is
+    therefore how many growers start, not how much each gives it.
+    """
     # More cane held back as seed where we intend to grow, less where we do not.
     preset = {
         "EXPAND": ("AGGRESSIVE", 70),
@@ -232,12 +309,25 @@ def build_strategies(varieties: list) -> dict:
     }
     out = {}
     for v in varieties:
-        p, pct = preset.get(v["strategy"], ("BALANCED", 50))
+        strat = v["strategy"]
+        p, pct = preset.get(strat, ("BALANCED", 50))
+
+        if strat == "EXPAND" or strat == "INTRODUCE-NEW":
+            yoy = DEFAULT_EXPAND_YOY
+        elif strat == "REDUCE":
+            yoy = DEFAULT_REDUCE_YOY
+        else:
+            yoy = 0.0
+
         out[v["id"]] = {
             "varietyId": v["id"],
-            "strategy": v["strategy"],
+            "strategy": strat,
             "retentionPreset": p,
             "retentionPct": pct,
+            "yoyChangePct": yoy,
+            "growerUptakePct": UPTAKE_BY_ACCEPTANCE.get(
+                int(v.get("farmerAcceptance") or 3), 7.0
+            ),
         }
     return out
 
@@ -286,7 +376,8 @@ def build_parameters(df: pd.DataFrame) -> dict:
 
 def main() -> None:
     df = load()
-    varieties = build_varieties(df)
+    judged = read_sheet()
+    varieties = build_varieties(df, judged)
     payload = {
         "schemaVersion": 1,
         "generatedAt": datetime.datetime.now().isoformat(timespec="seconds"),

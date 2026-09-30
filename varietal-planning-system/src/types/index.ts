@@ -10,8 +10,9 @@ export type AnimalDamageRisk = 'LOW' | 'MEDIUM' | 'HIGH';
  * area alone must never decide whether something is dropped.
  *   REVIEW - found in the survey but nobody has judged it yet
  */
-/** 12-month spring crop vs 18-month autumn crop - decides how long the field is held. */
-export type CropDuration = '12-MONTH' | '18-MONTH';
+/* CropDuration is gone. The cane team confirmed (29 Sep 2026) that every
+   variety at Gobind runs about 12 months, so an 18-month case the plan had to
+   reason about does not exist here. */
 
 /** Red rot reaction: resistant / moderately resistant / susceptible. */
 export type RedRotReaction = 'R' | 'MR' | 'S';
@@ -50,9 +51,6 @@ export interface VarietyRecord {
    *  Measured, not judged - it is clean and unambiguous for all 86 varieties.
    *  Step 6 uses it to stagger a grower's harvest across his plots. */
   maturity?: string;
-  /** 12 or 18 month. An 18-month autumn crop occupies the field for two seasons,
-   *  so this feeds the lock calculation directly. From the Step 2 sheet. */
-  cropDuration?: CropDuration;
   /** Red rot reaction. An S variety should not be cleared for expansion. */
   redRot?: RedRotReaction;
   /** Tonnes per hectare. Without it the plan has no tonnage, only area. */
@@ -108,6 +106,20 @@ export interface VarietyStrategySetting {
   /** Target hectares per year in target-driven mode, index 0 = Year 1.
    *  An array rather than three fixed fields so it follows the planning horizon. */
   targetsHa?: number[];
+  /** How fast this variety moves each year while expanding or reducing, as a
+   *  percentage of its own area. This used to be a constant inside the engine -
+   *  0.75 for reduce, 0.98 for hold - which meant the pace of the plan was
+   *  nobody's decision. Requested by the cane team, 29 Sep 2026. */
+  yoyChangePct?: number;
+  /** Share of growers who take this variety in a year, where they do not
+   *  already grow it. The ceiling on NEW area.
+   *
+   *  At Gobind the median grower farms 0.43 ha across two plots, so "a share of
+   *  his land" cannot be expressed - a trial is one plot. And one trial plot
+   *  yields enough seed to plant several times that grower's whole holding the
+   *  next year. So what limits a variety's spread is how many growers start,
+   *  not how much each of them gives it. */
+  growerUptakePct?: number;
 }
 
 export interface YearProjectionItem {
