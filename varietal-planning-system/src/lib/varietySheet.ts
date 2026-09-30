@@ -488,6 +488,7 @@ function readSheet(xml: string, shared: string[]): string[][] {
 }
 
 export interface SheetParseResult {
+  displayName?: Map<string, string>;
   /** Judgement values keyed by normalised variety name. */
   values: Map<string, Partial<VarietyRecord>>;
   rowCount: number;
@@ -576,6 +577,8 @@ export function parseVarietySheet(buffer: ArrayBuffer): SheetParseResult {
   const missingColumns = COLUMNS.filter((c) => !c.measured && !colOf.has(c.header)).map((c) => c.header);
 
   const values: SheetParseResult['values'] = new Map();
+  // norm(name) -> the name as the cane team spelled it, for rows we add.
+  const displayName = new Map<string, string>();
   const unknownNames: string[] = [];
   const warnings: string[] = [];
   let rowCount = 0;
@@ -631,6 +634,7 @@ export function parseVarietySheet(buffer: ArrayBuffer): SheetParseResult {
 
     if (Object.keys(patch).length === 0) { blankRows++; continue; }
     values.set(norm(name), patch);
+    displayName.set(norm(name), name);
   }
 
   if (missingColumns.length) {
@@ -638,14 +642,14 @@ export function parseVarietySheet(buffer: ArrayBuffer): SheetParseResult {
       `${missingColumns.length} column(s) missing from the file: ${missingColumns.join(', ')}. Those values were left unchanged.`
     );
   }
-  return { values, rowCount, unknownNames, blankRows, missingColumns, warnings };
+  return { values, displayName, rowCount, unknownNames, blankRows, missingColumns, warnings };
 }
 
 /** Merge parsed values onto the registry. Returns the new list plus a report. */
 export function applyVarietySheet(
   varieties: VarietyRecord[],
   parsed: SheetParseResult
-): { next: VarietyRecord[]; updated: number; unmatched: string[] } {
+): { next: VarietyRecord[]; updated: number; unmatched: string[]; added: string[] } {
   const seen = new Set<string>();
   let updated = 0;
   const next = varieties.map((v) => {
@@ -655,8 +659,45 @@ export function applyVarietySheet(
     updated++;
     return { ...v, ...patch, isEdited: true } as VarietyRecord;
   });
-  const unmatched = [...parsed.values.keys()].filter((k) => !seen.has(k));
-  return { next, updated, unmatched };
+  // A row the survey has never heard of is usually a typo, and adding it would
+  // put a variety in the registry that is not in the ground. INTRODUCE-NEW is
+  // the exception and the whole point of it: a variety the mill wants to bring
+  // in has no area yet, by definition. Dropping those silently meant the cane
+  // team could ask for a new variety and watch it vanish.
+  const added: string[] = [];
+  const unmatched: string[] = [];
+  [...parsed.values.keys()].forEach((k) => {
+    if (seen.has(k)) return;
+    const patch = parsed.values.get(k)!;
+    if (patch.strategy !== 'INTRODUCE-NEW') {
+      unmatched.push(k);
+      return;
+    }
+    const name = parsed.displayName?.get(k) ?? k;
+    added.push(name);
+    next.push({
+      id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      name,
+      currentAreaHa: 0,
+      measuredLowlandPct: 0,
+      surveyRecords: 0,
+      maturity: 'UNKNOWN',
+      landSuitability: 'UNKNOWN',
+      plantingSeason: 'UNKNOWN',
+      juiceSucrosePct: 0,
+      avgCaneWeightGrams: 0,
+      farmerAcceptance: 0,
+      animalDamageRisk: 'LOW',
+      seedAvailableQtl: 0,
+      stage: 'TRIAL',
+      strategy: 'INTRODUCE-NEW',
+      notes: 'Added from the Step 2 sheet - not present in the survey.',
+      ...patch,
+      isEdited: true,
+    } as VarietyRecord);
+    updated++;
+  });
+  return { next, updated, unmatched, added };
 }
 
 /** Hand the workbook to the browser as a download. */

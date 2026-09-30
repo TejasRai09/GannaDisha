@@ -161,7 +161,15 @@ export default function App() {
         )
       );
 
-      if (active?.parameters) setParams((prev) => ({ ...prev, ...active.parameters }));
+      // The survey is the authority on how much land there is. Without this the
+      // command area stayed at the built-in 57,000 ha, so every concentration
+      // cap, the free-replant figure and the Y3 target were measured against a
+      // number the file had already contradicted.
+      setParams((prev) => ({
+        ...prev,
+        ...(active?.parameters ?? {}),
+        commandAreaHa: Math.round(b.surveyedAreaHa) || prev.commandAreaHa,
+      }));
       if (active) setPreset(active);
       if (plots) setFreePlots(plots);
     },
@@ -272,6 +280,30 @@ export default function App() {
   // Village Allocations
   // Free plots come from the survey in Step 1. Empty until a file is loaded.
   const [freePlots, setFreePlots] = useState<FreePlot[]>([]);
+
+  /**
+   * Which agronomic fields are still unknown, judged from the varieties in
+   * front of us rather than from whatever shipped with the deployment.
+   *
+   * This used to read `preset.provisionalFields`, so it said nothing at all
+   * when the team uploaded their own sheet - and an unfilled sucrose column
+   * then produced a blended sucrose of 0.00% and a recovery of 0.00% on Step 5
+   * with no explanation anywhere on the screen.
+   */
+  const provisionalFields = useMemo(() => {
+    // Only varieties big enough to matter; a 0.5 ha trial missing a figure is
+    // not what makes the recovery number wrong.
+    const material = varieties.filter((v) => v.currentAreaHa >= 100);
+    if (!material.length) return [];
+    const missing = (pick: (v: VarietyRecord) => number | undefined) =>
+      material.filter((v) => !(Number(pick(v)) > 0)).length / material.length > 0.25;
+
+    const out: string[] = [];
+    if (missing((v) => v.juiceSucrosePct)) out.push('juiceSucrosePct');
+    if (missing((v) => v.caneYieldTha)) out.push('caneYieldTha');
+    if (missing((v) => v.avgCaneWeightGrams)) out.push('avgCaneWeightGrams');
+    return out;
+  }, [varieties]);
 
   // Engine Pure Calculations
   const projections = useMemo(() => {
@@ -442,7 +474,7 @@ export default function App() {
               onAddVariety={handleAddVariety}
               onUpdateVariety={handleUpdateVariety}
               onReplaceVarieties={applyVarietySheetUpload}
-              provisionalFields={preset?.provisionalFields}
+              provisionalFields={provisionalFields}
               surveyFileName={baseline?.fileName}
               onProceedToParameters={() => setCurrentStep(3)}
               isDark={isDark}
@@ -533,7 +565,7 @@ export default function App() {
               savedScenarios={savedScenarios}
               onSaveScenario={handleSaveScenario}
               onLoadScenario={handleLoadScenario}
-              provisionalFields={preset?.provisionalFields}
+              provisionalFields={provisionalFields}
               onProceedToAllocation={() => setCurrentStep(6)}
               isDark={isDark}
             />
